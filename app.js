@@ -142,13 +142,15 @@ function selectKeyboardKey(value) {
   if (state.running || document.querySelector('input[name=type]:checked').value !== "keyboard") return;
   const selected = normalizeKeyboardTarget(value);
   if (!selected) return;
-  get("target").value = selected.toUpperCase();
+  get("target").value = selected;
+  get("target-selected").textContent = selected.toUpperCase();
   get("keyboard-selection").textContent = selected.toUpperCase();
   get("keyboard-layout").querySelectorAll(".keyboard-key[data-key]").forEach(button => {
     const active = button.dataset.key === selected;
     button.classList.toggle("is-selected", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  if (get("keyboard-dialog").open) get("keyboard-dialog").close();
 }
 
 function buildKeyboard() {
@@ -182,8 +184,8 @@ function buildKeyboard() {
 
 function syncType() {
   const isMouse = document.querySelector('input[name=type]:checked').value === "mouse";
-  get("target").disabled = state.running || isMouse;
-  get("keyboard-panel").hidden = isMouse;
+  get("target-picker").disabled = state.running || isMouse;
+  if ((state.running || isMouse) && get("keyboard-dialog").open) get("keyboard-dialog").close();
   get("keyboard-layout").querySelectorAll(".keyboard-key[data-key]").forEach(button => {
     button.disabled = state.running || isMouse;
   });
@@ -250,6 +252,14 @@ get("connect1").addEventListener("click", async () => {
   try { await connectRev1(); } catch (e) { get("status1").textContent = e.message || String(e); }
 });
 get("form").addEventListener("submit", run);
+get("target-picker").addEventListener("click", () => {
+  if (state.running || document.querySelector('input[name=type]:checked').value !== "keyboard") return;
+  if (!get("keyboard-dialog").open) get("keyboard-dialog").showModal();
+});
+get("keyboard-close").addEventListener("click", () => get("keyboard-dialog").close());
+get("keyboard-dialog").addEventListener("click", event => {
+  if (event.target === get("keyboard-dialog")) get("keyboard-dialog").close();
+});
 get("stop").addEventListener("click", () => state.abort?.abort());
 document.querySelectorAll("input[name=type]").forEach(radio => radio.addEventListener("change", syncType));
 get("download").addEventListener("click", () => {

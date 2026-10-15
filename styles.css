@@ -17,24 +17,31 @@ input[type=number],input[type=text]{width:100%;border:1px solid #55627d;border-r
 
 .top-site-switch{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.top-site-switch a{display:inline-flex;align-items:center;text-decoration:none;padding:10px 13px;font:700 13px system-ui,sans-serif;border:1px solid #526482;border-radius:10px;color:#ecf2ff;background:#1c2941;white-space:nowrap}.top-site-switch a.current{background:#4867a5;border-color:#95adff;color:white}.top-site-switch a:hover{filter:brightness(1.25)}@media(max-width:750px){header{flex-wrap:wrap}.top-site-switch{justify-content:flex-start}}
 
-/* Original RAKKA's keyboard grid inspired this responsive, native selector. */
-.keyboard-panel{margin:18px 0}
-.keyboard-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
-.keyboard-heading h2{margin-bottom:4px}
+/* Compact on-demand keyboard selector */
+.selected-key-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:95px;background:#223659;border:1px solid #829cea;color:#f0f5ff;border-radius:8px;padding:8px 12px;font:800 16px/1.4 system-ui,sans-serif;letter-spacing:.05em}
+.selected-key-trigger:hover:not(:disabled){background:#304c80}
+.picker-chevron{color:#b5caff;font-size:17px}
+.keyboard-dialog{position:fixed;inset:0;margin:auto;width:min(690px,calc(100vw - 24px));max-width:100%;max-height:85vh;padding:0;background:#141d31;color:var(--text);border:1px solid #536583;border-radius:15px;box-shadow:0 24px 70px #000b;overflow:hidden}
+.keyboard-dialog[open]{display:block}
+.keyboard-dialog::backdrop{background:#050913c9;backdrop-filter:blur(3px)}
+.keyboard-dialog-content{padding:19px 18px 15px}
+.keyboard-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:14px}
+.keyboard-heading h2{font-size:18px;margin:0 0 3px}
 .keyboard-heading p{margin:0}
-.selected-key-input{max-width:95px!important;text-align:center;font-weight:800!important;letter-spacing:.1em;cursor:default;background:#223659!important;border-color:#829cea!important}
-.selected-key-badge{display:flex;align-items:center;gap:10px;flex-shrink:0;color:var(--muted);font-size:13px}
-.selected-key-badge strong{display:inline-flex;justify-content:center;align-items:center;min-width:39px;padding:6px 11px;background:#415eaa;color:#fff;border:1px solid #99b9ff;border-radius:9px;font-size:20px;line-height:1.2}
-.keyboard-scroll{overflow-x:auto;padding-bottom:4px}
-.keyboard-layout{min-width:780px;max-width:920px;margin:0 auto;padding:16px;border:1px solid #3e4f6c;border-radius:14px;background:linear-gradient(135deg,#0b1426,#17233b);display:flex;flex-direction:column;gap:7px}
-.keyboard-row{display:flex;gap:7px;width:100%}
-.keyboard-key{flex:var(--key-units) 1 0px;min-width:0;height:47px;padding:4px 0;border-radius:7px;border:1px solid #657591;background:linear-gradient(180deg,#33435d,#25344b);color:#eef4ff;font:700 13px/1.2 system-ui,"Malgun Gothic",sans-serif;box-shadow:inset 0 1px #ffffff1a,0 3px 0 #0b1326;cursor:pointer}
+.keyboard-dialog-controls{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.keyboard-close{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:4px!important;font-size:17px}
+.selected-key-badge{display:flex;align-items:center;gap:7px;flex-shrink:0;color:var(--muted);font-size:12px}
+.selected-key-badge strong{display:inline-flex;justify-content:center;align-items:center;min-width:32px;padding:4px 8px;background:#415eaa;color:#fff;border:1px solid #99b9ff;border-radius:7px;font-size:15px;line-height:1.2}
+.keyboard-scroll{overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:4px}
+.keyboard-layout{min-width:560px;width:100%;margin:0 auto;padding:10px;border:1px solid #3e4f6c;border-radius:11px;background:linear-gradient(135deg,#0b1426,#17233b);display:flex;flex-direction:column;gap:5px}
+.keyboard-row{display:flex;gap:5px;width:100%}
+.keyboard-key{flex:var(--key-units) 1 0px;min-width:0;height:36px;padding:3px 0;border-radius:6px;border:1px solid #657591;background:linear-gradient(180deg,#33435d,#25344b);color:#eef4ff;font:700 11px/1.15 system-ui,"Malgun Gothic",sans-serif;box-shadow:inset 0 1px #ffffff1a,0 2px 0 #0b1326;cursor:pointer}
 .keyboard-key:not(:disabled):hover{border-color:#a3b8ff;background:#425c89;filter:none}
-.keyboard-key:not(:disabled):active{transform:translateY(2px);box-shadow:inset 0 1px #ffffff1a,0 1px 0 #0b1326}
-.keyboard-key.is-selected{border:2px solid #a9c2ff;background:linear-gradient(180deg,#5b81da,#344f9f);color:#fff;box-shadow:0 0 0 2px #779efe35,0 3px 0 #182852}
-.keyboard-key.is-selected::after{content:" ✓";font-size:10px}
+.keyboard-key:not(:disabled):active{transform:translateY(1px);box-shadow:inset 0 1px #ffffff1a}
+.keyboard-key.is-selected{border:2px solid #a9c2ff;background:linear-gradient(180deg,#5b81da,#344f9f);color:#fff;box-shadow:0 0 0 2px #779efe35,0 2px 0 #182852}
+.keyboard-key.is-selected::after{content:" ✓";font-size:9px}
 .keyboard-key.is-disabled{color:#8898af;background:#202c40;border-color:#354158;box-shadow:none;opacity:.7;cursor:not-allowed}
 .keyboard-key:not(.is-disabled):disabled{opacity:.5;cursor:not-allowed}
 .keyboard-key:focus-visible{outline:2px solid #6df0d6;outline-offset:2px}
-#keyboard-help{margin:13px 2px 0}
-@media(max-width:750px){.keyboard-heading{flex-wrap:wrap;gap:8px}.keyboard-layout{padding:12px;gap:6px}.keyboard-key{height:43px}.keyboard-row{gap:6px}}
+#keyboard-help{margin:12px 2px 0}
+@media(max-width:640px){.keyboard-dialog-content{padding:13px 10px}.keyboard-heading{flex-wrap:wrap;gap:7px}.keyboard-heading h2{font-size:16px}.keyboard-layout{min-width:530px;padding:7px;gap:4px}.keyboard-key{height:33px}.keyboard-row{gap:4px}}
