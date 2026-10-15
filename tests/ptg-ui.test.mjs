@@ -43,3 +43,23 @@ test("mouse button selection is reactive and distinct mouse events are filtered"
  assert.match(js,/ptg-mouse-choice-selected/);
  assert.doesNotMatch(js,/c=x=>\{console\.log\(x\)\}/);
 });
+
+test("mouse choices sit outside image, without overlapping the picture", () => {
+ const source=txt("ptg/assets/index-B3lzit8o.js");
+ const css=txt("ptg/assets/site-switch.css");
+ assert.match(source,/ptg-mouse-choice-left/);
+ assert.match(source,/ptg-mouse-choice-right/);
+ assert.doesNotMatch(source,/left--32% ptg-mouse-choice/);
+ assert.doesNotMatch(source,/right--32% ptg-mouse-choice/);
+ assert.match(css,/\.ptg-mouse-choice-left\s*\{[^}]*transform:translateX\(calc\(-100% - 12px\)\)/);
+ assert.match(css,/\.ptg-mouse-choice-right\s*\{[^}]*transform:translateX\(calc\(100% \+ 12px\)\)/);
+});
+test("PTG count labels and unit suffixes are fully Korean", () => {
+ const js=txt("ptg/assets/index-B3lzit8o.js");
+ assert.match(js,/"샘플 횟수"/);
+ assert.match(js,/"측정 횟수"/);
+ assert.doesNotMatch(js,/측정 반복 횟수/);
+ assert.doesNotMatch(js,/De\(" [次轮] "\)/);
+ const suffixes=js.match(/De\(" 회 "\)/g)||[];
+ assert.equal(suffixes.length,2);
+});

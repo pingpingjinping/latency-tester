@@ -7,3 +7,21 @@
 .ptg-mouse-choice-selected::after{content:" ✓";font-weight:900}
 .ptg-mouse-choice:focus-visible{outline:3px solid #10b981!important;outline-offset:3px}
 .ptg-mouse-choice:disabled{opacity:.65!important;cursor:not-allowed!important}
+
+/* Keep the entire mouse image visible; place button selectors outside its edges. */
+.ptg-mouse-choice{
+  top:12%!important;
+  padding:7px 10px!important;
+  font-size:12px!important;
+  line-height:1.35!important;
+}
+.ptg-mouse-choice-left{
+  left:0!important;
+  right:auto!important;
+  transform:translateX(calc(-100% - 12px));
+}
+.ptg-mouse-choice-right{
+  right:0!important;
+  left:auto!important;
+  transform:translateX(calc(100% + 12px));
+}
