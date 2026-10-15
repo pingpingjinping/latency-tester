@@ -27,7 +27,7 @@
 <label><input type="radio" name="type" value="keyboard" checked> 키보드</label>
 <label><input type="radio" name="type" value="mouse"> 마우스 왼쪽 클릭</label>
 </fieldset>
-<div class="setting"><label for="target">측정 키</label><input id="target" type="text" maxlength="1" value="a"></div>
+<div class="setting"><label for="target">측정 키</label><input id="target" class="selected-key-input" type="text" maxlength="1" value="A" readonly aria-describedby="keyboard-help" title="아래 키보드에서 선택하세요"></div>
 <div class="fields">
 <label>키 유지 시간 <small>ms</small><input id="hold" type="number" min="1" max="200" value="20" required></label>
 <label>측정 간격 <small>ms</small><input id="interval" type="number" min="0" max="100" value="50" required></label>
@@ -39,6 +39,14 @@
 </form>
 </section>
 </div>
+<section class="panel keyboard-panel" id="keyboard-panel" aria-labelledby="keyboard-title">
+  <div class="keyboard-heading">
+    <div><h2 id="keyboard-title">측정할 키 선택</h2><p class="muted small">원본 RAKKA의 키보드 배열을 참고했어요. 아래 키를 클릭하면 측정 대상이 바뀝니다.</p></div>
+    <div class="selected-key-badge" aria-live="polite">선택한 키 <strong id="keyboard-selection">A</strong></div>
+  </div>
+  <div class="keyboard-scroll" aria-label="키보드 선택 영역"><div id="keyboard-layout" class="keyboard-layout" role="group" aria-label="측정할 키 선택"></div></div>
+  <p id="keyboard-help" class="muted small">테두리와 강조 색으로 선택 상태를 표시합니다. 회색 키는 측정 대상으로 지원하지 않습니다. 측정 시 영문 입력 모드를 사용하세요.</p>
+</section>
 <section class="panel results">
 <div class="result-top"><div><h2>측정 결과</h2><p class="muted" id="progress">아직 측정하지 않았습니다.</p></div><button id="download" class="secondary" disabled>CSV 저장</button></div>
 <div class="stats"><article><div>평균 Keydown</div><strong id="down-average">—</strong><small id="down-detail">키 누름 지연</small></article><article><div>평균 Keyup</div><strong id="up-average">—</strong><small id="up-detail">키 뗌 지연</small></article></div>
