@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>RAKKA Latency Tester · Offline</title>
+<link rel="stylesheet" href="./styles.css">
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<main class="shell">
+<header><div><div class="eyebrow">LOCAL · NO CLOUD</div><h1>RAKKA <em>Latency Tester</em></h1><p class="muted">키보드·마우스 레이턴시 측정 · 비공식 오프라인 도구</p></div><span class="pill">OFFLINE v0.1</span></header>
+<p id="environment" class="notice" role="status">브라우저 기능 확인 중...</p>
+<div class="grid">
+<section class="panel">
+<h2>테스터 연결</h2>
+<div class="device"><div><strong>Rev1</strong> <small>WebHID · 5249:4C54</small></div><button id="connect1">Rev1 연결</button></div>
+<p id="status1" class="muted" role="status">연결되지 않음</p>
+<hr>
+<div class="device"><div><strong>Rev3</strong> <small>WebUSB · 5249:4C65</small></div><button id="probe3" class="secondary">연결 진단</button></div>
+<p id="status3" class="muted" role="status">통신 규격 미확보 · 진단만 가능</p>
+<p class="warning">Rev3에서는 USB 연결 및 인터페이스 확보만 확인합니다. 데이터 전송, 측정 명령, DFU·펌웨어 명령은 실행하지 않습니다.</p>
+</section>
+<section class="panel">
+<h2>측정 설정 <small>Rev1 전용</small></h2>
+<form id="form">
+<fieldset><legend>측정 대상</legend>
+<label><input type="radio" name="type" value="keyboard" checked> 키보드</label>
+<label><input type="radio" name="type" value="mouse"> 마우스 왼쪽 클릭</label>
+</fieldset>
+<div class="setting"><label for="target">측정 키</label><input id="target" type="text" maxlength="1" value="a"></div>
+<div class="fields">
+<label>키 유지 시간 <small>ms</small><input id="hold" type="number" min="1" max="200" value="20" required></label>
+<label>측정 간격 <small>ms</small><input id="interval" type="number" min="0" max="100" value="50" required></label>
+<label>측정 횟수<input id="count" type="number" min="1" max="100" value="10" required></label>
+<label>예열 횟수<input id="warmup" type="number" min="0" max="10" value="5" required></label>
+</div>
+<p class="muted small">측정선을 대상 키/클릭 스위치의 두 접점에 연결하세요. 측정 중에는 브라우저 탭에 포커스를 유지해야 합니다.</p>
+<div class="actions"><button id="start" type="submit">측정 시작</button><button id="stop" type="button" class="secondary" hidden>측정 중단</button></div>
+</form>
+</section>
+</div>
+<section class="panel results">
+<div class="result-top"><div><h2>측정 결과</h2><p class="muted" id="progress">아직 측정하지 않았습니다.</p></div><button id="download" class="secondary" disabled>CSV 저장</button></div>
+<div class="stats"><article><div>평균 Keydown</div><strong id="down-average">—</strong><small id="down-detail">키 누름 지연</small></article><article><div>평균 Keyup</div><strong id="up-average">—</strong><small id="up-detail">키 뗌 지연</small></article></div>
+<div id="graph" class="graph" aria-label="회차별 누름 및 뗌 지연시간 막대 그래프"></div>
+<div class="legend"><span><b class="down"></b> Keydown</span><span><b class="up"></b> Keyup</span></div>
+<div class="overflow"><table><thead><tr><th>회차</th><th>Keydown</th><th>Keyup</th><th>상태</th></tr></thead><tbody id="rows"><tr><td colspan="4">아직 결과가 없습니다.</td></tr></tbody></table></div>
+</section>
+<footer>공식 RAKKA 웹사이트와 독립된 비공식 복원 프로젝트입니다. 브라우저·OS·PC 부하에 따라 측정값이 달라질 수 있습니다.</footer>
+</main>
+</body></html>
