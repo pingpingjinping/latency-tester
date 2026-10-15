@@ -21,7 +21,9 @@ test("PTG Vite preloads do not double-prefix slashes",()=>{
  // Vite's rE helper prepends '/'; deps themselves must not start with '/'.
  assert.ok(js.includes('rE=function(e){return"/"+e}'));
  assert.ok(js.startsWith('const __vite__fileDeps=["ptg/assets/'));
- assert.ok(!js.includes('"/ptg/assets/'));
+ const match=js.match(/^const __vite__fileDeps=(\\[[^\\]]+\\])/);
+ assert.ok(match, "Vite dependency array exists");
+ assert.ok(JSON.parse(match[1]).every(dep=>dep.startsWith("ptg/assets/")));
 });
 test("loading stylesheet is local",()=>{
  assert.ok(txt("server.mjs").includes("resource"));
