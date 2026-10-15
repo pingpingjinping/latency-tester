@@ -22,17 +22,25 @@ test("selection normalizes ASCII key target and rejects modifiers", () => {
   assert.equal(normalizeKeyboardTarget("한"),null);
 });
 
-test("Rev1 selector is click-only and respects measurement mode", async () => {
-  const { readFileSync } = await import("node:fs");
-  const src = path => readFileSync(new URL("../"+path,import.meta.url),"utf8");
-  const html=src("index.html"),app=src("app.js"),css=src("styles.css"),server=src("server.mjs");
-  assert.match(html,/id="target"[^>]*readonly/);
-  assert.match(html,/id="keyboard-panel"/);
-  assert.match(html,/id="keyboard-layout"/);
-  assert.match(app,/button\.type = "button"/);
-  assert.match(app,/button\.addEventListener\("click", \(\) => selectKeyboardKey\(key\.key\)\)/);
-  assert.match(app,/get\("keyboard-panel"\)\.hidden = isMouse/);
-  assert.match(app,/button\.disabled = state\.running \|\| isMouse/);
-  assert.match(css,/\.keyboard-key\.is-selected/);
-  assert.match(server,/\["\/keyboard\.mjs", \["keyboard\.mjs"/);
+test("Rev1 selector is compact, modal, and safe while measuring", async () => {
+ const {readFileSync}=await import("node:fs");
+ const src=name=>readFileSync(new URL("../"+name,import.meta.url),"utf8");
+ const html=src("index.html"),app=src("app.js"),css=src("styles.css"),server=src("server.mjs");
+ assert.match(html,/id="target" type="hidden"/);
+ assert.match(html,/id="target-picker" type="button"/);
+ assert.match(html,/aria-haspopup="dialog"/);
+ assert.match(html,/<dialog id="keyboard-dialog"/);
+ assert.match(html,/id="keyboard-close"/);
+ assert.doesNotMatch(html,/<section class="panel keyboard-panel"/);
+ assert.match(app,/get\("target-picker"\)\.addEventListener\("click"/);
+ assert.match(app,/get\("keyboard-dialog"\)\.showModal\(\)/);
+ assert.match(app,/get\("keyboard-dialog"\)\.close\(\)/);
+ assert.match(app,/event\.target === get\("keyboard-dialog"\)/);
+ assert.match(app,/get\("target"\)\.value = selected/);
+ assert.match(app,/get\("target-selected"\)\.textContent/);
+ assert.match(app,/get\("target-picker"\)\.disabled = state\.running \|\| isMouse/);
+ assert.match(app,/button\.disabled = state\.running \|\| isMouse/);
+ assert.match(css,/\.keyboard-dialog::backdrop/);
+ assert.match(css,/\.keyboard-key\.is-selected/);
+ assert.match(server,/\["\/keyboard\.mjs", \["keyboard\.mjs"/);
 });
