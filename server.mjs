@@ -19,7 +19,7 @@ http.createServer(async (req, res) => {
   }
   let route = routes.get(path);
   if (path === "/ptg/" || path === "/ptg/index.html") route = ["ptg/index.html", "text/html; charset=utf-8"];
-  else if (/^\/ptg\/(?:assets\/[a-zA-Z0-9_.-]+|favicon\.png)$/.test(path)) {
+  else if (/^\/ptg\/(?:assets\/[a-zA-Z0-9_.-]+|resource\/loading\.css|favicon\.png)$/.test(path)) {
     const ext = path.split(".").pop().toLowerCase();
     const types = { js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", png: "image/png", gif: "image/gif", svg: "image/svg+xml" };
     if (types[ext]) route = [path.slice(1), types[ext]];

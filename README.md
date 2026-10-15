@@ -19,12 +19,12 @@ RAKKA Rev1 비공식 로컬 측정 도구와 사용자 HAR로 추출한 PTG Stud
 
 ## PTG 스냅샷의 한계
 
-기본 레이턴시 측정 페이지 JS(`index-B3lzit8o.js`)는 확보되었지만 하드웨어 연결·측정은 검증하지 않았습니다.
+기본 측정 페이지 JS는 확보되었고 중국어 측정 UI 문구를 한국어로 번역했습니다. 하드웨어 연결·측정은 아직 검증하지 않았습니다.
 아래 파일은 HAR에 포함되지 않아 오프라인에서는 관련 메뉴나 그림이 표시되지 않을 수 있습니다.
 
 - 미확보 JS: `index-BHkCQ4M7.js`, `index-BCVNsK7o.js`, `index-DCIBnsKv.js`, `404-BLWz1NYt.js`, `403-BTMoFPF_.js`, `CommonPage-BYKh-44f.js`
-- 미확보 이미지: `probe-RiIajV1v.gif`, `mouse-CdkQfT0w.png`, `pcAccess-U82TlJZr.png`
-- 미확보 스타일: `/resource/loading.css` (HTML에서 해당 참조 제외)
+- 미확보 이미지: `probe-RiIajV1v.gif`, `pcAccess-U82TlJZr.png`
+- 로딩 스타일 `/resource/loading.css`는 두 번째 HAR에서 복구했습니다.
 
 PTG 정적 경로와 Vue Router base를 `/ptg/`로 수정했습니다. 외부 사이트 링크가 남아 있을 수 있으며 다른 메뉴는 완전하지 않습니다. HAR 파일이나 요청 헤더·쿠키는 업로드하지 않았습니다.
 
@@ -42,3 +42,6 @@ node --test tests/protocol.test.mjs
 ## 권리
 
 RAKKA Rev1은 사용자 제공 자료를 바탕으로 새로 작성한 비공식 구현입니다. PTG Studio 원본 코드 및 포함된 라이브러리의 권리는 각 권리자에게 있으며, 본 프로젝트는 공식 배포물이 아닙니다.
+
+## 추가 보강 (2026-10-15)
+두 번째 HAR에서 마우스 이미지(`mouse-CdkQfT0w.png`, 628×1150 PNG)와 로딩 CSS를 확보했습니다. PTG 앱과 공통 UI의 중국어 문구 100개 이상을 한국어로 옮겼으며 측정 패킷/연산 코드는 그대로 유지했습니다. 두 화면 상단에 Rev1 ↔ PTG 전환 버튼을 추가했습니다. 하드웨어 실제 측정은 아직 검증되지 않았습니다.

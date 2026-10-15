@@ -14,3 +14,5 @@ input[type=number],input[type=text]{width:100%;border:1px solid #55627d;border-r
 @media(max-width:750px){.grid{grid-template-columns:1fr}.panel{padding:18px}header{align-items:start}.pill{font-size:10px}.stats{gap:8px}button{padding:9px 11px}}
 
 .button-link{display:inline-flex;align-items:center;text-decoration:none;padding:10px 15px;border:1px solid var(--blue);border-radius:9px;color:var(--text);font-weight:700;white-space:nowrap}.button-link:hover{background:#273656}
+
+.top-site-switch{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.top-site-switch a{display:inline-flex;align-items:center;text-decoration:none;padding:10px 13px;font:700 13px system-ui,sans-serif;border:1px solid #526482;border-radius:10px;color:#ecf2ff;background:#1c2941;white-space:nowrap}.top-site-switch a.current{background:#4867a5;border-color:#95adff;color:white}.top-site-switch a:hover{filter:brightness(1.25)}@media(max-width:750px){header{flex-wrap:wrap}.top-site-switch{justify-content:flex-start}}

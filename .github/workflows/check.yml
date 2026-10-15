@@ -15,4 +15,4 @@ jobs:
       - run: node --check server.mjs
       - run: node --check ptg/assets/index-BZEgvNeM.js
       - run: node --check ptg/assets/index-B3lzit8o.js
-      - run: node --test tests/protocol.test.mjs
+      - run: node --test tests/protocol.test.mjs tests/ptg-ui.test.mjs
