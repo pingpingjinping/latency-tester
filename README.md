@@ -1,5 +1,64 @@
-# RAKKA Latency Tester (offline)
+# RAKKA Latency Tester — Offline
 
-로컬에서 동작하는 RAKKA 키보드·마우스 입력 지연시간 테스터 프로젝트입니다.
+RAKKA 레이턴시 테스터의 사라진 웹사이트에 의존하지 않고 측정할 수 있도록 만든 **비공식·로컬 실행 도구**입니다.
 
-개발 중인 소스는 feature branch와 Pull Request에서 확인할 수 있습니다. Rev1(HID) 지원을 먼저 구현하며 Rev3(WinUSB/WebUSB)는 통신 규격 확인 전까지 측정 명령을 보내지 않습니다.
+## 지원 현황
+
+| 기기 | USB ID | 현재 기능 |
+| --- | --- | --- |
+| Rev1 | 5249:4C54 | WebHID 기반 키보드 및 마우스 Keydown/Keyup 측정 구현 (실기 최종 검증 필요) |
+| Rev3 | 5249:4C65 | WebUSB 연결 및 인터페이스 진단 (실제 측정 불가) |
+
+Rev3의 Interrupt IN/OUT 엔드포인트 정보는 확인했지만 명령 패킷은 **미확보**입니다. Rev1 패킷을 Rev3에 임의 전송하지 않습니다. 펌웨어 업데이트·DFU 기능도 없습니다.
+
+## Windows 실행
+
+1. GitHub 저장소 ZIP을 다운로드하고 압축을 풉니다.
+2. Python 3 또는 Node.js 중 하나가 설치되어 있어야 합니다. 인터넷 연결은 최초 설치 시에만 필요할 수 있습니다.
+3. start-windows.bat 파일을 실행합니다.
+4. 브라우저가 자동으로 열리지 않으면 Chrome 또는 Edge에서 http://127.0.0.1:8765 로 접속합니다.
+5. Rev1을 키보드 스위치 또는 마우스 왼쪽 클릭 접점에 연결하고, Rev1 연결 → 측정 시작을 누릅니다.
+
+서버는 127.0.0.1 로컬 주소에만 바인딩됩니다. 앱 코드는 외부 네트워크 요청을 하지 않습니다. 브라우저 USB 장치 선택 창에서 명시적으로 접근을 허용해야 합니다.
+
+Python으로 직접 실행:
+
+    py -3 -m http.server 8765 --bind 127.0.0.1
+
+Node.js로 직접 실행:
+
+    node server.mjs
+
+웹 USB API의 보안 제약과 ES 모듈 때문에 HTML 파일을 더블클릭하여 file:// 로 실행하는 방법보다는 localhost 실행을 권장합니다.
+
+## Rev1 동작 원리
+
+- HID VID 0x5249 / PID 0x4C54
+- Feature report ID: 0 / 길이 8바이트
+- 첫째 바이트: 유지 시간(1~200ms)
+- 둘째 바이트: 항상 **0** — 1은 DFU 진입 명령이므로 전송하지 않음
+- 브라우저 performance.now() 기준, 누름 지연 = keydown(또는 mousedown) 이벤트 시각 - HID 송신 완료 시각
+- 뗌 지연 = keyup(또는 mouseup) 이벤트 시각 - HID 송신 완료 시각 - 설정한 유지 시간
+- 원본 방식에 따라 테스트 시작 전 5회 예열(설정 가능), 결과 통계 및 CSV 저장
+- 이벤트 수신 실패 시 실패로 기록하고 통계에서 제외
+
+이는 사용자 제공 Rev1 원본 코드와 실측 로그를 참고해 새로 구현한 로직입니다. PC/OS 부하와 브라우저 이벤트 스케줄링 영향을 받으므로 절대 정확도나 원본 사이트와 동일한 결과를 보장하지 않습니다.
+
+## Rev3 진단
+
+사용자가 확인한 Rev3 장치 정보: WinUSB 드라이버, interface 0, vendor class 255, interrupt endpoint 1 IN/OUT 각 64바이트, CH32V203C8T6 MCU. 프로그램은 사용자가 클릭한 경우에만 USB 장치를 열고 인터페이스를 확보했다가 해제하며, transferOut 등의 데이터 명령은 수행하지 않습니다.
+
+## 개발자용 검사
+
+Node.js 22 이상에서 추가 패키지 없이 실행:
+
+    node --check app.js
+    node --check protocol.mjs
+    node --check server.mjs
+    node --test tests/protocol.test.mjs
+
+GitHub Actions에서도 동일한 정적 검사를 실행합니다. 하드웨어 실측은 별도 사용자 검증이 필요합니다.
+
+## 출처와 권리
+
+원본 RAKKA 페이지의 동작과 실제 사용자 보존 자료에 근거한 비공식 복원 프로젝트입니다. 원본의 HTML, JS, CSS, mdui 라이브러리, 펌웨어는 그대로 재배포하지 않습니다. 제품명 및 관련 권리는 각 권리자에게 있습니다.
