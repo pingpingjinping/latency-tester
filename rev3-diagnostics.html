@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>RAKKA Rev3 — USB 진단</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./rev3-diagnostics.js"></script>
+  <style>
+    .diagnostic-layout{max-width:780px;margin:0 auto}
+    .diagnostic-layout .panel{margin:18px 0}
+    .diagnostic-layout pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0c1325;padding:18px;border:1px solid #41506e;border-radius:10px;min-height:180px;font:13px/1.65 ui-monospace,Consolas,monospace}
+    .diagnostic-layout .actions{flex-wrap:wrap}
+    .diagnostic-layout a{color:#9db6ff}
+  </style>
+</head>
+<body>
+<main class="shell diagnostic-layout">
+<header><div><div class="eyebrow">REV3 · READ-ONLY EXPERIMENT</div><h1>RAKKA <em>Rev3 진단</em></h1><p class="muted">측정 프로토콜 분석용 · 펌웨어 변경 없음</p></div></header>
+<p><a href="./">← Rev1 측정 화면으로 돌아가기</a></p>
+<section class="panel">
+<h2>1. USB 장치 정보 확인</h2>
+<p class="muted">VID 5249 / PID 4C65 장치를 선택하고 인터페이스·엔드포인트 정보를 표시합니다. 수신 명령은 보내지 않습니다.</p>
+<button id="identify" type="button">Rev3 선택 / 식별</button>
+<p id="status" role="status" class="muted">연결 전</p>
+</section>
+<section class="panel">
+<h2>2. IN 수신 1회 시험 <small>실험적 · 사용자 선택</small></h2>
+<p class="muted">인터럽트 IN 엔드포인트에서 최대 64바이트를 한 번 수신 대기합니다. <strong>OUT 패킷과 제어 명령은 전혀 보내지 않습니다.</strong> 2.5초 동안 데이터가 오지 않으면 중단을 시도하고 장치를 닫습니다.</p>
+<p class="warning">Rev3가 PC 명령을 받은 후에만 응답한다면 여기서는 아무 데이터도 나오지 않는 것이 정상일 수 있습니다. 수신 대기는 드라이버에 영향을 줄 수 있으므로 다른 프로그램에서 Rev3를 사용 중이라면 종료해 주세요. 응답이 없고 장치를 닫을 수 없다면 USB 선을 뽑았다 다시 연결하면 됩니다.</p>
+<div class="actions"><button id="receive" type="button" class="secondary" disabled>수신 1회 시도</button><button id="copy" type="button" class="secondary">로그 복사</button></div>
+</section>
+<section class="panel">
+<h2>진단 로그</h2>
+<pre id="log" aria-live="polite">시작 준비 완료. Rev3 선택 / 식별을 눌러 주세요.</pre>
+</section>
+<footer>이 페이지는 Rev3의 키보드·마우스 레이턴시를 측정하지 않습니다. 제조사 통신 명령을 아직 확보하지 못했습니다.</footer>
+</main>
+</body>
+</html>
