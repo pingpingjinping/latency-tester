@@ -1,4 +1,5 @@
 import { IDS, validateSettings, rev1Packet, calculate, stats, csv } from "./protocol.mjs";
+import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 
 const get = id => document.getElementById(id);
 const state = { rev1: null, running: false, abort: null, records: [] };
@@ -133,12 +134,59 @@ function setRunning(yes) {
   get("start").disabled = yes;
   get("stop").hidden = !yes;
   for (const input of get("form").querySelectorAll("input")) input.disabled = yes;
-  if (!yes) syncType();
+  syncType();
   env();
 }
 
+function selectKeyboardKey(value) {
+  if (state.running || document.querySelector('input[name=type]:checked').value !== "keyboard") return;
+  const selected = normalizeKeyboardTarget(value);
+  if (!selected) return;
+  get("target").value = selected.toUpperCase();
+  get("keyboard-selection").textContent = selected.toUpperCase();
+  get("keyboard-layout").querySelectorAll(".keyboard-key[data-key]").forEach(button => {
+    const active = button.dataset.key === selected;
+    button.classList.toggle("is-selected", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function buildKeyboard() {
+  const root = get("keyboard-layout");
+  const fragment = document.createDocumentFragment();
+  for (const keys of keyboardRows) {
+    const row = document.createElement("div");
+    row.className = "keyboard-row";
+    for (const key of keys) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "keyboard-key";
+      button.style.setProperty("--key-units", String(key.units));
+      button.textContent = key.label;
+      if (key.key === null) {
+        button.classList.add("is-disabled");
+        button.disabled = true;
+        button.title = "선택할 수 없는 키";
+      } else {
+        button.dataset.key = key.key.toLowerCase();
+        button.setAttribute("aria-pressed", "false");
+        button.addEventListener("click", () => selectKeyboardKey(key.key));
+      }
+      row.append(button);
+    }
+    fragment.append(row);
+  }
+  root.append(fragment);
+  selectKeyboardKey(get("target").value);
+}
+
 function syncType() {
-  get("target").disabled = state.running || document.querySelector("input[name=type]:checked").value === "mouse";
+  const isMouse = document.querySelector('input[name=type]:checked').value === "mouse";
+  get("target").disabled = state.running || isMouse;
+  get("keyboard-panel").hidden = isMouse;
+  get("keyboard-layout").querySelectorAll(".keyboard-key[data-key]").forEach(button => {
+    button.disabled = state.running || isMouse;
+  });
 }
 
 async function run(event) {
@@ -220,6 +268,7 @@ navigator.hid?.addEventListener("disconnect", event => {
     get("status1").textContent = "Rev1 연결 해제됨";
   }
 });
+buildKeyboard();
 syncType();
 env();
 render();
