@@ -16,9 +16,17 @@ test("PTG UI labels are in Korean",()=>{
  const js=txt("ptg/assets/index-B3lzit8o.js");
  for(const x of ["마우스 선택 영역","측정 시작","왼쪽 버튼","측정 설정"]) assert.ok(js.includes(x),x);
 });
-test("PTG preload paths are absolute",()=>{
+test("PTG Vite preloads do not double-prefix slashes",()=>{
  const js=txt("ptg/assets/index-BZEgvNeM.js");
- assert.ok(js.startsWith('const __vite__fileDeps=["/ptg/assets/'));
+ // Vite's rE helper prepends '/'; deps themselves must not start with '/'.
+ assert.ok(js.includes('rE=function(e){return"/"+e}'));
+ assert.ok(js.startsWith('const __vite__fileDeps=["ptg/assets/'));
+ const marker="],__vite__mapDeps=";
+ const end=js.indexOf(marker);
+ assert.ok(end>0,"Vite dependency array exists");
+ const deps=JSON.parse(js.slice("const __vite__fileDeps=".length,end+1));
+ assert.ok(deps.every(dep=>dep.startsWith("ptg/assets/")));
+
 });
 test("loading stylesheet is local",()=>{
  assert.ok(txt("server.mjs").includes("resource"));
