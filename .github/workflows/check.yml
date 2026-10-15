@@ -11,7 +11,8 @@ jobs:
         with:
           node-version: "22"
       - run: node --check app.js
-      - run: node --check rev3-diagnostics.js
       - run: node --check protocol.mjs
       - run: node --check server.mjs
+      - run: node --check ptg/assets/index-BZEgvNeM.js
+      - run: node --check ptg/assets/index-B3lzit8o.js
       - run: node --test tests/protocol.test.mjs

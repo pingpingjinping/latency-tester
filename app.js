@@ -10,11 +10,9 @@ function env() {
     get("environment").textContent = "보안 컨텍스트가 아닙니다. localhost 주소로 실행해 주세요.";
   } else {
     get("environment").textContent = "Rev1 WebHID: " + (navigator.hid ? "지원" : "미지원") +
-      " · Rev3 WebUSB: " + (navigator.usb ? "지원" : "미지원") +
-      " · 인터넷 통신 없음";
+      " · PTG Studio: 별도 백업 페이지 · Rev1 인터넷 통신 없음";
   }
   get("connect1").disabled = state.running || !navigator.hid || !window.isSecureContext;
-  get("probe3").disabled = state.running || !navigator.usb || !window.isSecureContext;
 }
 
 async function connectRev1() {
@@ -200,39 +198,9 @@ async function run(event) {
   }
 }
 
-async function probeRev3() {
-  if (!navigator.usb) return;
-  get("probe3").disabled = true;
-  let device;
-  let claimed = false;
-  try {
-    const authorized = await navigator.usb.getDevices();
-    device = authorized.find(d => d.vendorId === IDS.rev3.vendorId && d.productId === IDS.rev3.productId);
-    if (!device) device = await navigator.usb.requestDevice({ filters: [IDS.rev3] });
-    if (!device) throw new Error("장치를 선택하지 않았습니다.");
-    await device.open();
-    if (!device.configuration) throw new Error("활성 USB 구성이 없습니다.");
-    await device.claimInterface(0);
-    claimed = true;
-    const iface = device.configuration.interfaces.find(i => i.interfaceNumber === 0);
-    const alternate = iface?.alternate;
-    const endpoints = alternate?.endpoints.map(e => e.direction + " EP" + e.endpointNumber +
-      " (" + e.type + ", " + e.packetSize + "B)").join(", ");
-    get("status3").textContent = "연결 진단 성공 · Interface 0 · " +
-      (endpoints || "엔드포인트 정보 없음") + " · 측정 명령 미구현";
-  } catch (e) {
-    get("status3").textContent = "진단 실패: " + (e.message || String(e));
-  } finally {
-    if (claimed) { try { await device.releaseInterface(0); } catch {} }
-    if (device?.opened) { try { await device.close(); } catch {} }
-    env();
-  }
-}
-
 get("connect1").addEventListener("click", async () => {
   try { await connectRev1(); } catch (e) { get("status1").textContent = e.message || String(e); }
 });
-get("probe3").addEventListener("click", probeRev3);
 get("form").addEventListener("submit", run);
 get("stop").addEventListener("click", () => state.abort?.abort());
 document.querySelectorAll("input[name=type]").forEach(radio => radio.addEventListener("change", syncType));
