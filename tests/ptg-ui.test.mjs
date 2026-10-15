@@ -8,9 +8,18 @@ test("captured mouse image is a PNG",()=>{
  assert.ok(b.length>200000);
  assert.deepEqual([...b.subarray(0,8)],[137,80,78,71,13,10,26,10]);
 });
-test("both site switches are present",()=>{
+test("site switch is integrated next to PTG's V1.3 version link",()=>{
  assert.match(txt("index.html"),/top-site-switch/);
- assert.match(txt("ptg/index.html"),/ptg-site-switch/);
+ const html=txt("ptg/index.html");
+ const js=txt("ptg/assets/index-B3lzit8o.js");
+ const css=txt("ptg/assets/site-switch.css");
+ assert.doesNotMatch(html,/id="ptg-site-switch"/);
+ assert.match(js,/V\("a",\{href:"\/",class:"ptg-rev1-switch"/);
+ const ver=js.indexOf('onClick:b[1]');
+ const anchor=js.indexOf('class:"ptg-rev1-switch"',ver);
+ const next=js.indexOf('V("div",w3,',ver);
+ assert.ok(ver>0&&anchor>ver&&next>anchor&&anchor-ver<350,"switch follows V1.3 in the PTG header");
+ assert.match(css,/\.ptg-rev1-switch/);
 });
 test("PTG UI labels are in Korean",()=>{
  const js=txt("ptg/assets/index-B3lzit8o.js");
