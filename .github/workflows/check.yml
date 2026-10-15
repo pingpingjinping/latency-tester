@@ -11,6 +11,7 @@ jobs:
         with:
           node-version: "22"
       - run: node --check app.js
+      - run: node --check rev3-diagnostics.js
       - run: node --check protocol.mjs
       - run: node --check server.mjs
       - run: node --test tests/protocol.test.mjs
