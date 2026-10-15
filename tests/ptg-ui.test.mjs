@@ -72,3 +72,13 @@ test("PTG count labels and unit suffixes are fully Korean", () => {
  const suffixes=js.match(/De\(" 회 "\)/g)||[];
  assert.equal(suffixes.length,2);
 });
+
+test("PTG Rev1 link is spaced left of the version label and reset text is short", () => {
+ const css=txt("ptg/assets/site-switch.css");
+ const app=txt("ptg/assets/index-B3lzit8o.js");
+ const style=css.match(/\.ptg-rev1-switch\{([^}]+)\}/);
+ assert.ok(style, "Rev1 switch style exists");
+ assert.match(style[1], /margin-right:14px!important/);
+ assert.match(app, /gV=Ae\(\(\)=>V\("div",null,"초기화",-1\)\)/);
+ assert.doesNotMatch(app, /설정 초기화/);
+});
