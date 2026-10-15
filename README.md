@@ -1,75 +1,44 @@
-# RAKKA Latency Tester — Offline
+# Latency Tester — RAKKA Rev1 + PTG Studio
 
-RAKKA 레이턴시 테스터의 사라진 웹사이트에 의존하지 않고 측정할 수 있도록 만든 **비공식·로컬 실행 도구**입니다.
-
-## 지원 현황
-
-| 기기 | USB ID | 현재 기능 |
-| --- | --- | --- |
-| Rev1 | 5249:4C54 | WebHID 기반 키보드 및 마우스 Keydown/Keyup 측정 구현 (실기 최종 검증 필요) |
-| Rev3 | 5249:4C65 | WebUSB 연결 및 인터페이스 진단 (실제 측정 불가) |
-
-Rev3의 Interrupt IN/OUT 엔드포인트 정보는 확인했지만 명령 패킷은 **미확보**입니다. Rev1 패킷을 Rev3에 임의 전송하지 않습니다. 펌웨어 업데이트·DFU 기능도 없습니다.
+RAKKA Rev1 비공식 로컬 측정 도구와 사용자 HAR로 추출한 PTG Studio 사이트 스냅샷입니다.
 
 ## Windows 실행
 
-1. GitHub 저장소 ZIP을 다운로드하고 압축을 풉니다.
-2. Python 3 또는 Node.js 중 하나가 설치되어 있어야 합니다. 인터넷 연결은 최초 설치 시에만 필요할 수 있습니다.
-3. start-windows.bat 파일을 실행합니다.
-4. 브라우저가 자동으로 열리지 않으면 Chrome 또는 Edge에서 http://127.0.0.1:8765 로 접속합니다.
-5. Rev1을 키보드 스위치 또는 마우스 왼쪽 클릭 접점에 연결하고, Rev1 연결 → 측정 시작을 누릅니다.
+1. ZIP 다운로드 및 압축 해제.
+2. `start-windows.bat` 실행 (Python 3 또는 Node.js 필요).
+3. Chrome/Edge에서 `http://127.0.0.1:8765/` 열기.
+4. Rev1은 첫 화면에서 측정하고, **PTG Studio 열기** 버튼으로 `/ptg/`에 이동합니다.
 
-서버는 127.0.0.1 로컬 주소에만 바인딩됩니다. 앱 코드는 외부 네트워크 요청을 하지 않습니다. 브라우저 USB 장치 선택 창에서 명시적으로 접근을 허용해야 합니다.
+`py -3 -m http.server 8765 --bind 127.0.0.1` 또는 `node server.mjs`로 직접 실행할 수도 있습니다. WebHID와 JS 모듈을 위해 `file://` 대신 localhost를 권장합니다.
 
-Python으로 직접 실행:
+## 기능
 
-    py -3 -m http.server 8765 --bind 127.0.0.1
+- **RAKKA Rev1**: WebHID (5249:4C54), 키보드/마우스 Keydown·Keyup 측정, 예열, 그래프, CSV. 하드웨어 실기 최종 검증 필요.
+- **PTG Studio**: `https://pl.ptgstudio.com/`의 2026-10-15 사용자 HAR 캡처 응답 12개(HTML, JS, CSS, PNG)를 `ptg/` 아래에 보관.
+- **Rev3**: 관련 화면과 진단 코드는 이번 버전에서 제거.
 
-Node.js로 직접 실행:
+## PTG 스냅샷의 한계
 
-    node server.mjs
+기본 레이턴시 측정 페이지 JS(`index-B3lzit8o.js`)는 확보되었지만 하드웨어 연결·측정은 검증하지 않았습니다.
+아래 파일은 HAR에 포함되지 않아 오프라인에서는 관련 메뉴나 그림이 표시되지 않을 수 있습니다.
 
-웹 USB API의 보안 제약과 ES 모듈 때문에 HTML 파일을 더블클릭하여 file:// 로 실행하는 방법보다는 localhost 실행을 권장합니다.
+- 미확보 JS: `index-BHkCQ4M7.js`, `index-BCVNsK7o.js`, `index-DCIBnsKv.js`, `404-BLWz1NYt.js`, `403-BTMoFPF_.js`, `CommonPage-BYKh-44f.js`
+- 미확보 이미지: `probe-RiIajV1v.gif`, `mouse-CdkQfT0w.png`, `pcAccess-U82TlJZr.png`
+- 미확보 스타일: `/resource/loading.css` (HTML에서 해당 참조 제외)
 
-## Rev1 동작 원리
+PTG 정적 경로와 Vue Router base를 `/ptg/`로 수정했습니다. 외부 사이트 링크가 남아 있을 수 있으며 다른 메뉴는 완전하지 않습니다. HAR 파일이나 요청 헤더·쿠키는 업로드하지 않았습니다.
 
-- HID VID 0x5249 / PID 0x4C54
-- Feature report ID: 0 / 길이 8바이트
-- 첫째 바이트: 유지 시간(1~200ms)
-- 둘째 바이트: 항상 **0** — 1은 DFU 진입 명령이므로 전송하지 않음
-- 브라우저 performance.now() 기준, 누름 지연 = keydown(또는 mousedown) 이벤트 시각 - HID 송신 완료 시각
-- 뗌 지연 = keyup(또는 mouseup) 이벤트 시각 - HID 송신 완료 시각 - 설정한 유지 시간
-- 원본 방식에 따라 테스트 시작 전 5회 예열(설정 가능), 결과 통계 및 CSV 저장
-- 이벤트 수신 실패 시 실패로 기록하고 통계에서 제외
+## Rev1 안전·검사
 
-이는 사용자 제공 Rev1 원본 코드와 실측 로그를 참고해 새로 구현한 로직입니다. PC/OS 부하와 브라우저 이벤트 스케줄링 영향을 받으므로 절대 정확도나 원본 사이트와 동일한 결과를 보장하지 않습니다.
+Rev1 Feature report ID=0, 8바이트, 첫째 바이트 유지시간(1~200ms), 둘째 바이트 **항상 0** (1은 DFU 명령이라 사용 금지). 브라우저/OS 지연이 측정값에 영향을 줄 수 있습니다.
 
-## Rev3 진단
+```sh
+node --check app.js
+node --check protocol.mjs
+node --check server.mjs
+node --test tests/protocol.test.mjs
+```
 
-사용자가 확인한 Rev3 장치 정보: WinUSB 드라이버, interface 0, vendor class 255, interrupt endpoint 1 IN/OUT 각 64바이트, CH32V203C8T6 MCU. 프로그램은 사용자가 클릭한 경우에만 USB 장치를 열고 인터페이스를 확보했다가 해제하며, transferOut 등의 데이터 명령은 수행하지 않습니다.
+## 권리
 
-## Rev3 고급 USB 진단 (실험적)
-
-첫 화면에서 **Rev3 USB 상세 진단 및 수신 로그**를 누르거나 http://127.0.0.1:8765/rev3-diagnostics.html 로 들어갑니다.
-
-1. Rev3 USB 기기를 연결하고 **Rev3 선택 / 식별**을 누릅니다.
-2. 인터페이스, USB class/subclass/protocol, IN/OUT 엔드포인트가 로그에 표시됩니다.
-3. 필요할 때만 **수신 1회 시도**를 누릅니다. 이는 interrupt IN EP1에서 64바이트까지 **한 번 읽어보는** 실험입니다. 2.5초 동안 아무 응답이 없을 수 있습니다.
-4. **로그 복사**를 눌러 결과를 공유할 수 있습니다. 기기 일련번호는 출력하지 않습니다.
-
-Rev3 진단은 키보드·마우스 입력 지연을 측정하지 않습니다. 미확인 OUT 데이터, DFU, 펌웨어 업데이트 및 USB reset 등의 명령은 전송하지 않습니다. 읽기 전용 IN 트랜잭션도 드라이버 동작에 영향을 줄 수 있어 오직 사용자 명시적 클릭으로 실행합니다. WebUSB transferIn은 AbortSignal로 취소할 수 없으므로 타임아웃 시 device.close()로 중단을 시도합니다. 중단이 안 되면 장치를 뺐다 다시 연결하세요. **응답이 없다는 결과만으로 장치가 고장 났다거나 펌웨어가 손상됐다는 뜻은 아닙니다.**
-
-## 개발자용 검사
-
-Node.js 22 이상에서 추가 패키지 없이 실행:
-
-    node --check app.js
-    node --check protocol.mjs
-    node --check server.mjs
-    node --test tests/protocol.test.mjs
-
-GitHub Actions에서도 동일한 정적 검사를 실행합니다. 하드웨어 실측은 별도 사용자 검증이 필요합니다.
-
-## 출처와 권리
-
-원본 RAKKA 페이지의 동작과 실제 사용자 보존 자료에 근거한 비공식 복원 프로젝트입니다. 원본의 HTML, JS, CSS, mdui 라이브러리, 펌웨어는 그대로 재배포하지 않습니다. 제품명 및 관련 권리는 각 권리자에게 있습니다.
+RAKKA Rev1은 사용자 제공 자료를 바탕으로 새로 작성한 비공식 구현입니다. PTG Studio 원본 코드 및 포함된 라이브러리의 권리는 각 권리자에게 있으며, 본 프로젝트는 공식 배포물이 아닙니다.

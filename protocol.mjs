@@ -1,6 +1,5 @@
 export const IDS = Object.freeze({
-  rev1: Object.freeze({ vendorId: 0x5249, productId: 0x4c54 }),
-  rev3: Object.freeze({ vendorId: 0x5249, productId: 0x4c65 })
+  rev1: Object.freeze({ vendorId: 0x5249, productId: 0x4c54 })
 });
 
 export function validateSettings(input) {

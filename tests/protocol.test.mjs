@@ -2,9 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { IDS, validateSettings, rev1Packet, calculate, stats, csv } from "../protocol.mjs";
 
-test("Rev1 and Rev3 USB IDs", () => {
+test("Rev1 USB ID", () => {
   assert.deepEqual(IDS.rev1, { vendorId: 0x5249, productId: 0x4c54 });
-  assert.deepEqual(IDS.rev3, { vendorId: 0x5249, productId: 0x4c65 });
 });
 test("Rev1 measurement packets never enter DFU mode", () => {
   assert.deepEqual([...rev1Packet(20)], [20, 0, 0, 0, 0, 0, 0, 0]);

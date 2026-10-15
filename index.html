@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>RAKKA Latency Tester · Offline</title>
+<title>Latency Tester · Rev1 + PTG Studio</title>
 <link rel="stylesheet" href="./styles.css">
 <script type="module" src="./app.js"></script>
 </head>
 <body>
 <main class="shell">
-<header><div><div class="eyebrow">LOCAL · NO CLOUD</div><h1>RAKKA <em>Latency Tester</em></h1><p class="muted">키보드·마우스 레이턴시 측정 · 비공식 오프라인 도구</p></div><span class="pill">OFFLINE v0.1</span></header>
+<header><div><div class="eyebrow">LOCAL · NO CLOUD</div><h1>RAKKA <em>Latency Tester</em></h1><p class="muted">RAKKA Rev1 측정 · PTG Studio 사이트 백업</p></div><span class="pill">REV1 · PTG</span></header>
 <p id="environment" class="notice" role="status">브라우저 기능 확인 중...</p>
 <div class="grid">
 <section class="panel">
@@ -17,10 +17,8 @@
 <div class="device"><div><strong>Rev1</strong> <small>WebHID · 5249:4C54</small></div><button id="connect1">Rev1 연결</button></div>
 <p id="status1" class="muted" role="status">연결되지 않음</p>
 <hr>
-<div class="device"><div><strong>Rev3</strong> <small>WebUSB · 5249:4C65</small></div><button id="probe3" class="secondary">연결 진단</button></div>
-<p id="status3" class="muted" role="status">통신 규격 미확보 · 진단만 가능</p>
-<p><a href="./rev3-diagnostics.html" style="color:#9db6ff">Rev3 USB 상세 진단 및 수신 로그 →</a></p>
-<p class="warning">Rev3에서는 USB 연결 및 인터페이스 확보만 확인합니다. 데이터 전송, 측정 명령, DFU·펌웨어 명령은 실행하지 않습니다.</p>
+<div class="device"><div><strong>PTG Studio</strong> <small>Latency Tester · HAR 기반 사이트 백업</small></div><a class="button-link" href="./ptg/">PTG Studio 열기 →</a></div>
+<p class="muted small">PTG의 메인 측정 페이지를 보관했습니다. 다른 메뉴의 일부 JS·이미지는 미확보 상태입니다.</p>
 </section>
 <section class="panel">
 <h2>측정 설정 <small>Rev1 전용</small></h2>
@@ -48,6 +46,6 @@
 <div class="legend"><span><b class="down"></b> Keydown</span><span><b class="up"></b> Keyup</span></div>
 <div class="overflow"><table><thead><tr><th>회차</th><th>Keydown</th><th>Keyup</th><th>상태</th></tr></thead><tbody id="rows"><tr><td colspan="4">아직 결과가 없습니다.</td></tr></tbody></table></div>
 </section>
-<footer>공식 RAKKA 웹사이트와 독립된 비공식 복원 프로젝트입니다. 브라우저·OS·PC 부하에 따라 측정값이 달라질 수 있습니다.</footer>
+<footer>RAKKA Rev1은 비공식 복원이며, PTG Studio는 사용자 HAR 기반 스냅샷입니다. 브라우저·OS·PC 부하에 따라 측정값이 달라질 수 있습니다.</footer>
 </main>
 </body></html>

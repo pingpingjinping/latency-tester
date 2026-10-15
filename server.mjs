@@ -7,14 +7,23 @@ const routes = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
-  ["/rev3-diagnostics.html", ["rev3-diagnostics.html", "text/html; charset=utf-8"]],
-  ["/rev3-diagnostics.js", ["rev3-diagnostics.js", "text/javascript; charset=utf-8"]],
   ["/protocol.mjs", ["protocol.mjs", "text/javascript; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]]
 ]);
 http.createServer(async (req, res) => {
   const path = new URL(req.url, "http://127.0.0.1").pathname;
-  const route = routes.get(path);
+  if (path === "/ptg") {
+    res.writeHead(308, { Location: "/ptg/" });
+    res.end();
+    return;
+  }
+  let route = routes.get(path);
+  if (path === "/ptg/" || path === "/ptg/index.html") route = ["ptg/index.html", "text/html; charset=utf-8"];
+  else if (/^\/ptg\/(?:assets\/[a-zA-Z0-9_.-]+|favicon\.png)$/.test(path)) {
+    const ext = path.split(".").pop().toLowerCase();
+    const types = { js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", png: "image/png", gif: "image/gif", svg: "image/svg+xml" };
+    if (types[ext]) route = [path.slice(1), types[ext]];
+  }
   if (!route) {
     res.writeHead(path === "/favicon.ico" ? 204 : 404);
     res.end();
