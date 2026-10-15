@@ -1,5 +1,5 @@
 /* Compact switch within PTG's existing white header, next to the V1.3 link. */
-.ptg-rev1-switch{display:inline-flex!important;align-items:center;justify-content:center;align-self:center;min-height:28px;padding:4px 10px;border:1px solid #94a3b8;border-radius:7px;background:#f1f5f9;color:#1e293b!important;text-decoration:none!important;font:700 12px/1.4 system-ui,"Malgun Gothic",sans-serif;white-space:nowrap}
+.ptg-rev1-switch{display:inline-flex!important;align-items:center;justify-content:center;align-self:center;min-height:28px;padding:4px 10px;border:1px solid #94a3b8;border-radius:7px;background:#f1f5f9;color:#1e293b!important;text-decoration:none!important;font:700 12px/1.4 system-ui,"Malgun Gothic",sans-serif;white-space:nowrap;margin-right:14px!important}
 .ptg-rev1-switch:hover{background:#dbeafe;border-color:#2563eb;color:#1d4ed8!important}
 .ptg-rev1-switch:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
 /* PTG mouse left/right selection: keyboard accessible and clearly marked. */
