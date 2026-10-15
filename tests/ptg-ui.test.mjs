@@ -24,3 +24,14 @@ test("loading stylesheet is local",()=>{
  assert.ok(txt("server.mjs").includes("resource"));
  assert.ok(txt("ptg/index.html").includes("/ptg/resource/loading.css"));
 });
+
+test("mouse button selection is reactive and distinct mouse events are filtered", () => {
+ const js=txt("ptg/assets/index-B3lzit8o.js");
+ assert.match(js,/testMode:"kb",mouseButton:"left"/);
+ assert.match(js,/c=x=>\{o\.mouseButton=x\}/);
+ assert.match(js,/E\.button===\(o\.mouseButton==="right"\?2:0\)/);
+ assert.match(js,/"aria-pressed":o\.mouseButton==="left"/);
+ assert.match(js,/"aria-pressed":o\.mouseButton==="right"/);
+ assert.match(js,/ptg-mouse-choice-selected/);
+ assert.doesNotMatch(js,/c=x=>\{console\.log\(x\)\}/);
+});
