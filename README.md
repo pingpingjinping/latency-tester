@@ -48,6 +48,8 @@ Node.js로 직접 실행:
 
 사용자가 확인한 Rev3 장치 정보: WinUSB 드라이버, interface 0, vendor class 255, interrupt endpoint 1 IN/OUT 각 64바이트, CH32V203C8T6 MCU. 프로그램은 사용자가 클릭한 경우에만 USB 장치를 열고 인터페이스를 확보했다가 해제하며, transferOut 등의 데이터 명령은 수행하지 않습니다.
 
+[2026-10-15 실장치 조사 기록](docs/rev3-investigation-2026-10-15.md)에 실제 USB 디스크립터, Rev1과의 전송 방식 차이, 웹앱 외부에서 별도 승인받아 수행한 단발 호환 시험 결과를 정리했습니다. USB 전송은 성공한 경우가 있지만 A/B 출력 작동과 측정 기능은 아직 확인되지 않았습니다. 이 기록은 Rev3 측정 지원을 뜻하지 않으며, 웹앱에 OUT 명령을 추가하지 않습니다.
+
 ## Rev3 고급 USB 진단 (실험적)
 
 첫 화면에서 **Rev3 USB 상세 진단 및 수신 로그**를 누르거나 http://127.0.0.1:8765/rev3-diagnostics.html 로 들어갑니다.
