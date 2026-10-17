@@ -123,12 +123,12 @@ function render() {
   rows.replaceChildren();
   const graph = get("graph");
   graph.replaceChildren();
-  const showMidpoint = state.lastRevision === "rev3" &&
-    document.querySelector('input[name="rev3-view"]:checked')?.value === "midpoint";
+  const showMidpoint = state.lastRevision === "rev3";
+  // Use the individually measured OUT->IN response time for each successful sample.
+  // Original Rev3 values stay unmodified in state.records and CSV.
   const shown = r => showMidpoint ? rev3Midpoint(r) : { down: r.down, up: r.up };
-  get("rev3-view-settings").hidden = state.lastRevision !== "rev3";
-  get("down-average-label").textContent = "평균 Keydown" + (showMidpoint ? " (중간점 추정)" : "");
-  get("up-average-label").textContent = "평균 Keyup" + (showMidpoint ? " (중간점 추정)" : "");
+  get("down-average-label").textContent = "평균 Keydown" + (showMidpoint ? " (추정)" : "");
+  get("up-average-label").textContent = "평균 Keyup" + (showMidpoint ? " (추정)" : "");
   const d = stats(state.records.map(r => shown(r).down));
   const u = stats(state.records.map(r => shown(r).up));
   get("down-average").textContent = d ? fmt(d.avg) : "—";
@@ -145,15 +145,13 @@ function render() {
     const upOut = stats(measured.map(r => r.upFromOut));
     const rawDown = stats(measured.map(r => r.down));
     const rawUp = stats(measured.map(r => r.up));
-    const midDown = stats(measured.map(r => rev3Midpoint(r).down));
-    const midUp = stats(measured.map(r => rev3Midpoint(r).up));
+    get("rev3-original-down").textContent = rawDown ? fmt(rawDown.avg) : "—";
+    get("rev3-original-up").textContent = rawUp ? fmt(rawUp.avg) : "—";
     get("rev3-compare-details").textContent = gap
-      ? "원본 IN 기준 Keydown " + fmt(rawDown.avg) + " / Keyup " + fmt(rawUp.avg) +
-        " · 중간점 추정 Keydown " + fmt(midDown.avg) + " / Keyup " + fmt(midUp.avg) +
-        " · OUT 완료 기준 Keydown " + fmt(downOut.avg) + " / Keyup " + fmt(upOut.avg) +
+      ? "OUT 완료 기준 Keydown " + fmt(downOut?.avg) + " / Keyup " + fmt(upOut?.avg) +
         " · USB OUT→IN 응답 대기 평균 " + fmt(gap.avg) +
-        " (범위 " + fmt(gap.min) + "~" + fmt(gap.max) + ")" 
-      : "Rev3 측정값이 쌓이면 OUT 완료 기준과 USB 응답 대기 시간을 함께 보여줍니다.";
+        " (범위 " + fmt(gap.min) + "~" + fmt(gap.max) + ")"
+      : "Rev3 측정값이 쌓이면 USB 응답 대기와 OUT 기준 레이턴시를 표시합니다.";
   }
   if (!state.records.length) {
     const cell = rows.insertRow().insertCell();
@@ -315,7 +313,6 @@ get("connect3").addEventListener("click", async () => {
   try { await connectRev3(); } catch (e) { get("status3").textContent = e.message || String(e); }
 });
 get("form").addEventListener("submit", run);
-document.querySelectorAll('input[name="rev3-view"]').forEach(radio => radio.addEventListener("change", render));
 get("target-picker").addEventListener("click", () => {
   if (state.running || document.querySelector('input[name=type]:checked').value !== "keyboard") return;
   if (!get("keyboard-dialog").open) get("keyboard-dialog").showModal();
