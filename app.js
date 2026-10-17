@@ -94,7 +94,16 @@ async function measureOnce(device, revision, settings, signal) {
       await input.result;
       if (signal.aborted) throw new DOMException("중단됨", "AbortError");
       const t = input.times();
-      return calculate(reply.receivedAt, t.downAt, t.upAt, settings.hold);
+      const official = calculate(reply.receivedAt, t.downAt, t.upAt, settings.hold);
+      const outBased = calculate(reply.sentAt, t.downAt, t.upAt, settings.hold);
+      // These fields compare two timing origins on the SAME physical actuation.
+      // The original Rev3 site's displayed values (IN basis) remain unchanged.
+      return {
+        ...official,
+        downFromOut: outBased.down,
+        upFromOut: outBased.up,
+        usbReplyWait: reply.receivedAt - reply.sentAt
+      };
     }
     // Rev1 Feature Report byte 1 always ZERO (1 would enter DFU mode).
     await device.sendFeatureReport(0, rev1Packet(settings.hold));
@@ -121,6 +130,20 @@ function render() {
   get("down-detail").textContent = d ? "최소 " + fmt(d.min) + " · P95 " + fmt(d.p95) + " · 최대 " + fmt(d.max) : "키 누름 지연";
   get("up-detail").textContent = u ? "최소 " + fmt(u.min) + " · P95 " + fmt(u.p95) + " · 최대 " + fmt(u.max) : "키 뗌 지연";
   get("download").disabled = state.records.length === 0;
+  const diagnostic = get("rev3-comparison");
+  const measured = state.records.filter(r => Number.isFinite(r.usbReplyWait));
+  diagnostic.hidden = state.lastRevision !== "rev3";
+  if (state.lastRevision === "rev3") {
+    const gap = stats(measured.map(r => r.usbReplyWait));
+    const downOut = stats(measured.map(r => r.downFromOut));
+    const upOut = stats(measured.map(r => r.upFromOut));
+    get("rev3-compare-details").textContent = gap
+      ? "동일한 입력에서 OUT 완료 기준 Keydown " + fmt(downOut.avg) +
+        " / Keyup " + fmt(upOut.avg) +
+        " · USB OUT→IN 응답 대기 평균 " + fmt(gap.avg) +
+        " (범위 " + fmt(gap.min) + "~" + fmt(gap.max) + ")" 
+      : "Rev3 측정값이 쌓이면 OUT 완료 기준과 USB 응답 대기 시간을 함께 보여줍니다.";
+  }
   if (!state.records.length) {
     const cell = rows.insertRow().insertCell();
     cell.colSpan = 4;
