@@ -52,10 +52,9 @@ test("Rev1 CSV leaves Rev3-only diagnostics blank", () => {
 });
 
 test("Rev3 midpoint estimates use each sample's own USB response time", () => {
-  assert.deepEqual(
-    rev3Midpoint({ down: -6.89, up: -8.08, usbReplyWait: 15.98 }),
-    { down: 1.1000000000000005, up: -0.08999999999999986 }
-  );
+  const fun = rev3Midpoint({ down: -6.89, up: -8.08, usbReplyWait: 15.98 });
+  assert.ok(Math.abs(fun.down - 1.1) < 1e-9);
+  assert.ok(Math.abs(fun.up - (-0.09)) < 1e-9);
   assert.ok(Math.abs(rev3Midpoint({ down: 2.55, up: 2.32, usbReplyWait: 16.09 }).down - 10.595) < 1e-9);
   assert.ok(Number.isNaN(rev3Midpoint({ down: NaN, up: 2.32, usbReplyWait: 16 }).down));
 });
