@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>Latency Tester · Rev1 + PTG Studio</title>
+<title>Latency Tester · RAKKA Rev1 + Rev3 + PTG Studio</title>
 <link rel="stylesheet" href="./styles.css">
 <script type="module" src="./app.js"></script>
 </head>
 <body>
 <main class="shell">
-<header><div><div class="eyebrow">LOCAL · NO CLOUD</div><h1>RAKKA <em>Latency Tester</em></h1><p class="muted">RAKKA Rev1 측정 · PTG Studio 사이트 백업</p></div><nav class="top-site-switch" aria-label="사이트 전환"><a href="./" class="current" aria-current="page">RAKKA Rev1</a><a href="./ptg/">PTG Studio →</a></nav></header>
+<header><div><div class="eyebrow">LOCAL · NO CLOUD</div><h1>RAKKA <em>Latency Tester</em></h1><p class="muted">RAKKA Rev1·Rev3 측정 · PTG Studio 사이트 백업</p></div><nav class="top-site-switch" aria-label="사이트 전환"><a href="./" class="current" aria-current="page">RAKKA Rev1/Rev3</a><a href="./ptg/">PTG Studio →</a></nav></header>
 <p id="environment" class="notice" role="status">브라우저 기능 확인 중...</p>
 <div class="grid">
 <section class="panel">
@@ -17,12 +17,20 @@
 <div class="device"><div><strong>Rev1</strong> <small>WebHID · 5249:4C54</small></div><button id="connect1">Rev1 연결</button></div>
 <p id="status1" class="muted" role="status">연결되지 않음</p>
 <hr>
+<div class="device"><div><strong>Rev3</strong> <small>WebUSB · 5249:4C65</small></div><button id="connect3">Rev3 연결</button></div>
+<p id="status3" class="muted" role="status">연결되지 않음 · 새로 복원한 명령 규격으로 측정 지원</p>
+<p class="muted small">Rev3는 원본 RAKKA 2023년 웹 코드에서 확인한 64바이트 프로토콜을 사용합니다. 펌웨어 업데이트 명령은 없습니다.</p>
+<hr>
 <div class="device"><div><strong>PTG Studio</strong> <small>Latency Tester · HAR 기반 사이트 백업</small></div><a class="button-link" href="./ptg/">PTG Studio 열기 →</a></div>
 <p class="muted small">PTG 메인 화면을 한국어로 번역하고 마우스 그림을 복구했습니다. 측정은 실기로 확인해야 합니다.</p>
 </section>
 <section class="panel">
-<h2>측정 설정 <small>Rev1 전용</small></h2>
+<h2>측정 설정 <small>RAKKA Rev1 / Rev3</small></h2>
 <form id="form">
+<fieldset><legend>사용할 테스터</legend>
+<label><input type="radio" name="revision" value="rev1" checked> Rev1</label>
+<label><input type="radio" name="revision" value="rev3"> Rev3</label>
+</fieldset>
 <fieldset><legend>측정 대상</legend>
 <label><input type="radio" name="type" value="keyboard" checked> 키보드</label>
 <label><input type="radio" name="type" value="mouse"> 마우스 왼쪽 클릭</label>
@@ -46,7 +54,7 @@
 <div class="legend"><span><b class="down"></b> Keydown</span><span><b class="up"></b> Keyup</span></div>
 <div class="overflow"><table><thead><tr><th>회차</th><th>Keydown</th><th>Keyup</th><th>상태</th></tr></thead><tbody id="rows"><tr><td colspan="4">아직 결과가 없습니다.</td></tr></tbody></table></div>
 </section>
-<footer>RAKKA Rev1은 비공식 복원이며, PTG Studio는 사용자 HAR 기반 스냅샷입니다. 브라우저·OS·PC 부하에 따라 측정값이 달라질 수 있습니다.</footer>
+<footer>RAKKA Rev1·Rev3는 비공식 독립 복원이며, PTG Studio는 사용자 HAR 기반 스냅샷입니다. 브라우저·OS·PC 부하에 따라 측정값이 달라질 수 있습니다.</footer>
 </main>
 <dialog id="keyboard-dialog" class="keyboard-dialog" aria-labelledby="keyboard-title" aria-describedby="keyboard-help">
  <div class="keyboard-dialog-content">
