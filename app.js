@@ -1,8 +1,9 @@
 import { IDS, validateSettings, rev1Packet, calculate, stats, csv } from "./protocol.mjs";
 import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
+import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 
 const get = id => document.getElementById(id);
-const state = { rev1: null, running: false, abort: null, records: [] };
+const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [] };
 const fmt = value => Number.isFinite(value) ? value.toFixed(2) + " ms" : "—";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -11,9 +12,11 @@ function env() {
     get("environment").textContent = "보안 컨텍스트가 아닙니다. localhost 주소로 실행해 주세요.";
   } else {
     get("environment").textContent = "Rev1 WebHID: " + (navigator.hid ? "지원" : "미지원") +
-      " · PTG Studio: 별도 백업 페이지 · Rev1 인터넷 통신 없음";
+      " · Rev3 WebUSB: " + (navigator.usb ? "지원" : "미지원") +
+      " · PTG Studio 백업 · 로컬 측정";
   }
   get("connect1").disabled = state.running || !navigator.hid || !window.isSecureContext;
+  get("connect3").disabled = state.running || !navigator.usb || !window.isSecureContext;
 }
 
 async function connectRev1() {
@@ -29,6 +32,14 @@ async function connectRev1() {
   state.rev1 = device;
   get("status1").textContent = "연결 완료 · " + (device.productName || "RAKKA Rev1");
   return device;
+}
+
+async function connectRev3() {
+  if (state.rev3?.opened) return state.rev3;
+  const { session, protocolVersion } = await openRev3Session();
+  state.rev3 = session;
+  get("status3").textContent = "Rev3 연결 완료 · 프로토콜 버전 " + protocolVersion;
+  return session;
 }
 
 function collectInput(settings, signal) {
@@ -72,16 +83,24 @@ function collectInput(settings, signal) {
   };
 }
 
-async function measureOnce(device, settings, signal) {
+async function measureOnce(device, revision, settings, signal) {
   if (signal.aborted) throw new DOMException("중단됨", "AbortError");
   const input = collectInput(settings, signal);
   try {
-    // Rev1 feature report only; byte 1 is always ZERO (never enter DFU mode).
+    if (revision === "rev3") {
+      // The vendor's Rev3 site timestamps AFTER the 64-byte IN reply.
+      // Unlike Rev1, it does not base the result on transferOut completion.
+      const reply = await device.contactOnce(settings.hold);
+      await input.result;
+      if (signal.aborted) throw new DOMException("중단됨", "AbortError");
+      const t = input.times();
+      return calculate(reply.receivedAt, t.downAt, t.upAt, settings.hold);
+    }
+    // Rev1 Feature Report byte 1 always ZERO (1 would enter DFU mode).
     await device.sendFeatureReport(0, rev1Packet(settings.hold));
     const sentAt = performance.now();
     await input.result;
     if (signal.aborted) throw new DOMException("중단됨", "AbortError");
-    // Mirror the original read, but do not confuse it with a latency reading.
     await device.receiveFeatureReport(0);
     const t = input.times();
     return calculate(sentAt, t.downAt, t.upAt, settings.hold);
@@ -195,6 +214,7 @@ async function run(event) {
   event.preventDefault();
   if (state.running) return;
   let settings, device;
+  const revision = document.querySelector('input[name=revision]:checked').value;
   try {
     settings = validateSettings({
       type: document.querySelector("input[name=type]:checked").value,
@@ -204,15 +224,20 @@ async function run(event) {
       count: get("count").value,
       warmup: get("warmup").value
     });
-    device = state.rev1?.opened ? state.rev1 : await connectRev1();
-    if (/66b7/i.test(device.productName || "") && settings.hold > 20) {
-      throw new Error("구형 Rev1 펌웨어는 유지 시간을 20ms 이하로 설정해야 합니다.");
+    if (revision === "rev3") {
+      device = await connectRev3();
+    } else {
+      device = state.rev1?.opened ? state.rev1 : await connectRev1();
+      if (/66b7/i.test(device.productName || "") && settings.hold > 20) {
+        throw new Error("구형 Rev1 펌웨어는 유지 시간을 20ms 이하로 설정해야 합니다.");
+      }
     }
   } catch (e) {
     get("progress").textContent = e.message || String(e);
     return;
   }
   state.records = [];
+  state.lastRevision = revision;
   render();
   const controller = new AbortController();
   state.abort = controller;
@@ -226,7 +251,7 @@ async function run(event) {
         ? "예열 " + (i + 1) + "/" + settings.warmup
         : "측정 " + (count + 1) + "/" + settings.count;
       try {
-        const result = await measureOnce(device, settings, controller.signal);
+        const result = await measureOnce(device, revision, settings, controller.signal);
         if (!warmup) {
           count++;
           state.records.push({ index: count, ...result, error: null });
@@ -251,6 +276,9 @@ async function run(event) {
 get("connect1").addEventListener("click", async () => {
   try { await connectRev1(); } catch (e) { get("status1").textContent = e.message || String(e); }
 });
+get("connect3").addEventListener("click", async () => {
+  try { await connectRev3(); } catch (e) { get("status3").textContent = e.message || String(e); }
+});
 get("form").addEventListener("submit", run);
 get("target-picker").addEventListener("click", () => {
   if (state.running || document.querySelector('input[name=type]:checked').value !== "keyboard") return;
@@ -267,7 +295,7 @@ get("download").addEventListener("click", () => {
   const blob = new Blob([csv(state.records)], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "rakka-rev1-" + new Date().toISOString().slice(0, 10) + ".csv";
+  link.download = "rakka-" + state.lastRevision + "-" + new Date().toISOString().slice(0, 10) + ".csv";
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
@@ -276,6 +304,13 @@ navigator.hid?.addEventListener("disconnect", event => {
     state.abort?.abort();
     state.rev1 = null;
     get("status1").textContent = "Rev1 연결 해제됨";
+  }
+});
+navigator.usb?.addEventListener("disconnect", event => {
+  if (event.device === state.rev3?.device) {
+    state.abort?.abort();
+    state.rev3 = null;
+    get("status3").textContent = "Rev3 연결 해제됨";
   }
 });
 buildKeyboard();
