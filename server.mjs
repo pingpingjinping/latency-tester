@@ -8,6 +8,7 @@ const routes = new Map([
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
   ["/protocol.mjs", ["protocol.mjs", "text/javascript; charset=utf-8"]],
+  ["/rev3-protocol.mjs", ["rev3-protocol.mjs", "text/javascript; charset=utf-8"]],
   ["/keyboard.mjs", ["keyboard.mjs", "text/javascript; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]]
 ]);

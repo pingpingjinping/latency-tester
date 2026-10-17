@@ -1,21 +1,22 @@
-# Latency Tester — RAKKA Rev1 + PTG Studio
+# Latency Tester — RAKKA Rev1 + Rev3 + PTG Studio
 
-RAKKA Rev1 비공식 로컬 측정 도구와 사용자 HAR로 추출한 PTG Studio 사이트 스냅샷입니다.
+RAKKA Rev1·Rev3 비공식 오프라인 측정 도구와 사용자 HAR로 추출한 PTG Studio 사이트 스냅샷입니다. RAKKA Rev3 공식 사이트인 https://latency.rakka.dev/ 의 사용자가 직접 보관한 JS/HAR를 분석해 통신 규격을 독립 구현했습니다.
 
 ## Windows 실행
 
 1. ZIP 다운로드 및 압축 해제.
 2. `start-windows.bat` 실행 (Python 3 또는 Node.js 필요).
 3. Chrome/Edge에서 `http://127.0.0.1:8765/` 열기.
-4. Rev1은 첫 화면에서 측정하고, **PTG Studio 열기** 버튼으로 `/ptg/`에 이동합니다.
+4. RAKKA 화면에서 **Rev1 / Rev3 테스터를 선택**하고 연결한 뒤 측정합니다. **PTG Studio 열기** 버튼으로 `/ptg/`에 이동할 수 있습니다.
 
 `py -3 -m http.server 8765 --bind 127.0.0.1` 또는 `node server.mjs`로 직접 실행할 수도 있습니다. WebHID와 JS 모듈을 위해 `file://` 대신 localhost를 권장합니다.
 
 ## 기능
 
-- **RAKKA Rev1**: WebHID (5249:4C54), 키보드/마우스 Keydown·Keyup 측정, 예열, 그래프, CSV. 하드웨어 실기 최종 검증 필요.
+- **RAKKA Rev1**: WebHID (5249:4C54), 키보드/마우스 Keydown·Keyup 측정, 예열, 그래프, CSV.
+- **RAKKA Rev3**: WebUSB (5249:4C65), 공식 사이트 코드에서 확인한 64바이트 `contact_once` 명령, 키보드/마우스 Keydown·Keyup, 예열·그래프·CSV. **실제 Rev3 하드웨어 실측 검증 필요.**
 - **PTG Studio**: `https://pl.ptgstudio.com/`의 2026-10-15 사용자 HAR 캡처 응답 12개(HTML, JS, CSS, PNG)를 `ptg/` 아래에 보관.
-- **Rev3**: 관련 화면과 진단 코드는 이번 버전에서 제거.
+- **Rev3**는 메인 RAKKA 화면에 다시 추가했습니다. 이전처럼 명령 없는 수신 대기 대신 공식 코드에서 확인한 OUT→IN 요청/응답 방식입니다.
 
 ## PTG 스냅샷의 한계
 
@@ -28,15 +29,16 @@ RAKKA Rev1 비공식 로컬 측정 도구와 사용자 HAR로 추출한 PTG Stud
 
 PTG 정적 경로와 Vue Router base를 `/ptg/`로 수정했습니다. 외부 사이트 링크가 남아 있을 수 있으며 다른 메뉴는 완전하지 않습니다. HAR 파일이나 요청 헤더·쿠키는 업로드하지 않았습니다.
 
-## Rev1 안전·검사
+## Rev1 / Rev3 안전·검사
 
-Rev1 Feature report ID=0, 8바이트, 첫째 바이트 유지시간(1~200ms), 둘째 바이트 **항상 0** (1은 DFU 명령이라 사용 금지). 브라우저/OS 지연이 측정값에 영향을 줄 수 있습니다.
+Rev1 Feature report ID=0, 8바이트, 첫째 바이트 유지시간(1~200ms), 둘째 바이트 **항상 0** (1은 DFU 명령이라 사용 금지). Rev3는 WinUSB Interrupt OUT/IN 64바이트이며 version(0), contact_once(2) 두 명령만 실행합니다. Rev3 펌웨어 변경·DFU·serial 조회 명령을 제공하지 않습니다. 브라우저/OS 지연이 측정값에 영향을 줄 수 있습니다.
 
 ```sh
 node --check app.js
 node --check protocol.mjs
+node --check rev3-protocol.mjs
 node --check server.mjs
-node --test tests/protocol.test.mjs
+node --test tests/protocol.test.mjs tests/rev3-protocol.test.mjs
 ```
 
 ## 권리
@@ -67,3 +69,19 @@ PTG 화면 위의 별도 전체 너비 전환 바를 제거하고, 기존 흰색
 
 - [PL01 기술문서 한국어 요약과 QQ 캡처 출처](references/pl01/qq-docs/README.md)
 - [Gitee 하드웨어·펌웨어 원본 파일 인덱스](references/pl01/gitee/README.md)
+
+
+## Rev3 복원 근거 (2026-10-17)
+
+사용자가 제공한 https://latency.rakka.dev/ 페이지의 2023년 빌드 파일 `0454688439ab25a701a1.js`, `41742477d8ae3d9c3654.js` 및 HAR에 정상 응답(HTTP 200)이 담겨 있었습니다.
+
+- USB 인터페이스: vendor class `0xFF`, subclass `0x4C`, protocol `0x54`
+- USB Interrupt OUT/IN 엔드포인트, 64바이트 패킷
+- `get_version` 명령 ID `0`: 64바이트 중 첫 바이트 0
+- `contact_once` 명령 ID `2`: 첫 바이트 2, offset 2의 uint32 little-endian에 유지시간(ms)
+- 응답 byte 0: 명령 ID, byte 1: 결과 코드(0 성공), offset 2: uint32 데이터
+- Rev3 지연 계산 기준점은 **transferIn 응답을 받은 직후**로, Rev1의 Feature Report 전송 완료 직후와 다릅니다.
+
+초기 연결 시 `get_version`을 요청하며, 측정 중에는 `contact_once`만 전송합니다. USB 장치가 응답하지 않으면 2.5초 후 수신 대기를 중단하고 재연결하도록 처리합니다. **Rev3 실기 통과 여부와 공식 사이트 수치 일치 여부는 아직 확인되지 않았습니다.**
+
+상세 규격은 [docs/rev3-protocol.md](docs/rev3-protocol.md)에 기재했습니다. 원본 HAR과 JS는 사용자 로컬에서만 보존하며 이 공개 저장소에는 넣지 않았습니다.
