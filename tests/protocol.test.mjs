@@ -32,3 +32,21 @@ test("CSV outputs Keydown and Keyup values", () => {
   assert.match(result, /keydown_ms,keyup_ms,status/);
   assert.match(result, /1,9\.410,10\.330,ok/);
 });
+
+test("Rev3 diagnostics add OUT-based timings without altering canonical values", () => {
+  const result = csv([{
+    index: 1,
+    down: 5.25,
+    up: 5.5,
+    error: null,
+    downFromOut: 8.25,
+    upFromOut: 8.5,
+    usbReplyWait: 3
+  }]);
+  assert.match(result, /rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms/);
+  assert.match(result, /1,5\.250,5\.500,ok,8\.250,8\.500,3\.000/);
+});
+test("Rev1 CSV leaves Rev3-only diagnostics blank", () => {
+  const lines = csv([{ index: 1, down: 9.41, up: 10.33, error: null }]).trim().split(/\r?\n/);
+  assert.equal(lines[1], "1,9.410,10.330,ok,,,");
+});
