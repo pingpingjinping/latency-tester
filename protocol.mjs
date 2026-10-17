@@ -49,13 +49,16 @@ export function stats(values) {
 }
 
 export function csv(records) {
-  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status"];
+  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms"];
   for (const r of records) {
     lines.push([
       r.index,
       Number.isFinite(r.down) ? r.down.toFixed(3) : "",
       Number.isFinite(r.up) ? r.up.toFixed(3) : "",
-      r.error ? "failed" : "ok"
+      r.error ? "failed" : "ok",
+      Number.isFinite(r.downFromOut) ? r.downFromOut.toFixed(3) : "",
+      Number.isFinite(r.upFromOut) ? r.upFromOut.toFixed(3) : "",
+      Number.isFinite(r.usbReplyWait) ? r.usbReplyWait.toFixed(3) : ""
     ].join(","));
   }
   return lines.join("\r\n") + "\r\n";
