@@ -48,8 +48,21 @@ export function stats(values) {
   };
 }
 
+// EXPERIMENTAL estimate, not an independently verified contact timestamp.
+// Never rewrite the official Rev3 values stored as record.down / record.up.
+export function rev3Midpoint(record) {
+  if (!Number.isFinite(record.down) || !Number.isFinite(record.up) ||
+      !Number.isFinite(record.usbReplyWait)) {
+    return { down: NaN, up: NaN };
+  }
+  return {
+    down: record.down + record.usbReplyWait / 2,
+    up: record.up + record.usbReplyWait / 2
+  };
+}
+
 export function csv(records) {
-  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms"];
+  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms,rev3_midpoint_keydown_est_ms,rev3_midpoint_keyup_est_ms"];
   for (const r of records) {
     lines.push([
       r.index,
@@ -58,7 +71,9 @@ export function csv(records) {
       r.error ? "failed" : "ok",
       Number.isFinite(r.downFromOut) ? r.downFromOut.toFixed(3) : "",
       Number.isFinite(r.upFromOut) ? r.upFromOut.toFixed(3) : "",
-      Number.isFinite(r.usbReplyWait) ? r.usbReplyWait.toFixed(3) : ""
+      Number.isFinite(r.usbReplyWait) ? r.usbReplyWait.toFixed(3) : "",
+      Number.isFinite(rev3Midpoint(r).down) ? rev3Midpoint(r).down.toFixed(3) : "",
+      Number.isFinite(rev3Midpoint(r).up) ? rev3Midpoint(r).up.toFixed(3) : ""
     ].join(","));
   }
   return lines.join("\r\n") + "\r\n";

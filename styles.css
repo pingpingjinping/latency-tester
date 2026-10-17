@@ -45,3 +45,8 @@ input[type=number],input[type=text]{width:100%;border:1px solid #55627d;border-r
 .keyboard-key:focus-visible{outline:2px solid #6df0d6;outline-offset:2px}
 #keyboard-help{margin:12px 2px 0}
 @media(max-width:640px){.keyboard-dialog-content{padding:13px 10px}.keyboard-heading{flex-wrap:wrap;gap:7px}.keyboard-heading h2{font-size:16px}.keyboard-layout{min-width:530px;padding:7px;gap:4px}.keyboard-key{height:33px}.keyboard-row{gap:4px}}
+
+/* Rev3: keep raw website readings visible but secondary to the per-run estimate. */
+.rev3-original{display:flex;flex-wrap:wrap;column-gap:18px;row-gap:6px;margin:4px 0 10px;color:var(--muted);font-size:13px}
+.rev3-original strong{font-size:14px;color:var(--text);font-variant-numeric:tabular-nums}
+#rev3-comparison>.muted.small{margin:6px 0}
