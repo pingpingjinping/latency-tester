@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { IDS, validateSettings, rev1Packet, calculate, stats, csv } from "../protocol.mjs";
+import { IDS, validateSettings, rev1Packet, calculate, stats, csv, rev3Midpoint } from "../protocol.mjs";
 
 test("Rev1 USB ID", () => {
   assert.deepEqual(IDS.rev1, { vendorId: 0x5249, productId: 0x4c54 });
@@ -48,5 +48,22 @@ test("Rev3 diagnostics add OUT-based timings without altering canonical values",
 });
 test("Rev1 CSV leaves Rev3-only diagnostics blank", () => {
   const lines = csv([{ index: 1, down: 9.41, up: 10.33, error: null }]).trim().split(/\r?\n/);
-  assert.equal(lines[1], "1,9.410,10.330,ok,,,");
+  assert.equal(lines[1], "1,9.410,10.330,ok,,,,,");
+});
+
+test("Rev3 midpoint estimates use each sample's own USB response time", () => {
+  assert.deepEqual(
+    rev3Midpoint({ down: -6.89, up: -8.08, usbReplyWait: 15.98 }),
+    { down: 1.1000000000000005, up: -0.08999999999999986 }
+  );
+  assert.ok(Math.abs(rev3Midpoint({ down: 2.55, up: 2.32, usbReplyWait: 16.09 }).down - 10.595) < 1e-9);
+  assert.ok(Number.isNaN(rev3Midpoint({ down: NaN, up: 2.32, usbReplyWait: 16 }).down));
+});
+test("Rev3 CSV retains raw values and adds midpoint estimates in separate columns", () => {
+  const result = csv([{
+    index: 1, down: -6.89, up: -8.08, usbReplyWait: 15.98,
+    downFromOut: 9.09, upFromOut: 7.9, error: null
+  }]);
+  assert.match(result, /rev3_midpoint_keydown_est_ms,rev3_midpoint_keyup_est_ms/);
+  assert.match(result, /1,-6\.890,-8\.080,ok,9\.090,7\.900,15\.980,1\.100,-0\.090/);
 });
