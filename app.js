@@ -1,4 +1,4 @@
-import { IDS, validateSettings, rev1Packet, calculate, stats, csv } from "./protocol.mjs";
+import { IDS, validateSettings, rev1Packet, calculate, stats, csv, rev3Midpoint } from "./protocol.mjs";
 import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 
@@ -123,8 +123,14 @@ function render() {
   rows.replaceChildren();
   const graph = get("graph");
   graph.replaceChildren();
-  const d = stats(state.records.map(r => r.down));
-  const u = stats(state.records.map(r => r.up));
+  const showMidpoint = state.lastRevision === "rev3" &&
+    document.querySelector('input[name="rev3-view"]:checked')?.value === "midpoint";
+  const shown = r => showMidpoint ? rev3Midpoint(r) : { down: r.down, up: r.up };
+  get("rev3-view-settings").hidden = state.lastRevision !== "rev3";
+  get("down-average-label").textContent = "평균 Keydown" + (showMidpoint ? " (중간점 추정)" : "");
+  get("up-average-label").textContent = "평균 Keyup" + (showMidpoint ? " (중간점 추정)" : "");
+  const d = stats(state.records.map(r => shown(r).down));
+  const u = stats(state.records.map(r => shown(r).up));
   get("down-average").textContent = d ? fmt(d.avg) : "—";
   get("up-average").textContent = u ? fmt(u.avg) : "—";
   get("down-detail").textContent = d ? "최소 " + fmt(d.min) + " · P95 " + fmt(d.p95) + " · 최대 " + fmt(d.max) : "키 누름 지연";
@@ -137,9 +143,14 @@ function render() {
     const gap = stats(measured.map(r => r.usbReplyWait));
     const downOut = stats(measured.map(r => r.downFromOut));
     const upOut = stats(measured.map(r => r.upFromOut));
+    const rawDown = stats(measured.map(r => r.down));
+    const rawUp = stats(measured.map(r => r.up));
+    const midDown = stats(measured.map(r => rev3Midpoint(r).down));
+    const midUp = stats(measured.map(r => rev3Midpoint(r).up));
     get("rev3-compare-details").textContent = gap
-      ? "동일한 입력에서 OUT 완료 기준 Keydown " + fmt(downOut.avg) +
-        " / Keyup " + fmt(upOut.avg) +
+      ? "원본 IN 기준 Keydown " + fmt(rawDown.avg) + " / Keyup " + fmt(rawUp.avg) +
+        " · 중간점 추정 Keydown " + fmt(midDown.avg) + " / Keyup " + fmt(midUp.avg) +
+        " · OUT 완료 기준 Keydown " + fmt(downOut.avg) + " / Keyup " + fmt(upOut.avg) +
         " · USB OUT→IN 응답 대기 평균 " + fmt(gap.avg) +
         " (범위 " + fmt(gap.min) + "~" + fmt(gap.max) + ")" 
       : "Rev3 측정값이 쌓이면 OUT 완료 기준과 USB 응답 대기 시간을 함께 보여줍니다.";
@@ -150,18 +161,19 @@ function render() {
     cell.textContent = "아직 결과가 없습니다.";
     return;
   }
-  const values = state.records.flatMap(row => [row.down, row.up])
+  const values = state.records.flatMap(row => [shown(row).down, shown(row).up])
     .filter(v => Number.isFinite(v) && v >= 0);
   const maximum = Math.max(1, ...values);
   for (const row of state.records) {
     const tr = rows.insertRow();
-    for (const value of [row.index, fmt(row.down), fmt(row.up), row.error ? "실패: " + row.error : "성공"]) {
+    const shownRow = shown(row);
+    for (const value of [row.index, fmt(shownRow.down), fmt(shownRow.up), row.error ? "실패: " + row.error : "성공"]) {
       tr.insertCell().textContent = String(value);
     }
     const plot = document.createElement("div");
     plot.className = "plot";
-    plot.title = row.index + "회 · " + fmt(row.down) + " / " + fmt(row.up);
-    for (const [kind, value] of [["down", row.down], ["up", row.up]]) {
+    plot.title = row.index + "회 · " + fmt(shownRow.down) + " / " + fmt(shownRow.up);
+    for (const [kind, value] of [["down", shownRow.down], ["up", shownRow.up]]) {
       const bar = document.createElement("div");
       bar.className = "bar " + kind;
       bar.style.height = (Number.isFinite(value) ? Math.max(0, Math.min(100, value / maximum * 100)) : 0) + "%";
@@ -303,6 +315,7 @@ get("connect3").addEventListener("click", async () => {
   try { await connectRev3(); } catch (e) { get("status3").textContent = e.message || String(e); }
 });
 get("form").addEventListener("submit", run);
+document.querySelectorAll('input[name="rev3-view"]').forEach(radio => radio.addEventListener("change", render));
 get("target-picker").addEventListener("click", () => {
   if (state.running || document.querySelector('input[name=type]:checked').value !== "keyboard") return;
   if (!get("keyboard-dialog").open) get("keyboard-dialog").showModal();
