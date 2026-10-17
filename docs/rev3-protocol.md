@@ -1,0 +1,61 @@
+# RAKKA Rev3 WebUSB protocol (recovered from user-supplied website)
+
+Status: **verified by reading the vendor website's 2023 production JavaScript, not yet independently hardware-validated.**
+
+Reference site: https://latency.rakka.dev/ . Bundles captured by the device owner: `0454688439ab25a701a1.js` and `41742477d8ae3d9c3654.js`, including full browser HAR (2026-10-17). The raw HAR and original bundles are intentionally **not** committed to this public repository.
+
+## Identification
+
+- Observed Rev3 device VID = `0x5249`, PID = `0x4C65` (the original site filters by VID and interface class, with PID unspecified)
+- WebUSB class = `0xFF`, subclass = `0x4C`, protocol = `0x54`
+- Interface 0 on the tested board; interrupt IN endpoint 1 / OUT endpoint 1; max packet = 64B
+- Always select configuration and claim the matching interface before exchange.
+
+## Commands
+
+All request/reply reports contain **64 bytes** and are transmitted over USB interrupt endpoints, not HID feature reports.
+
+| Byte offset | Type | Purpose |
+| --- | --- | --- |
+| 0 | `uint8` | Command ID |
+| 1 | `uint8` | Reply result code (0 = OK) |
+| 2..5 | `uint32 LE` | Value. For contact: simulated hold duration, in ms |
+| 6..63 | zeros | Reserved/unused for these requests |
+
+Defined command identifiers:
+
+| ID | Vendor enum | Used in our app? |
+| --- | --- | --- |
+| 0 | `get_version` | Yes, on connect |
+| 1 | `get_serial_number` | No, privacy / not needed |
+| 2 | `contact_once` | Yes, for measurement |
+
+The manufacturer's original implementation assigns `get_version` reply value at byte 2, and `get_serial_number` three uint32 reply values at offsets 2, 6 and 10.
+
+Example contact for **20ms**:
+```text
+02 00 14 00 00 00 00 00 ... (64 bytes total)
+```
+
+The original site sends each request via `usb.transferOut(outEndpoint, 64-byte packet)`, then waits for `usb.transferIn(inEndpoint, 64)`. It checks that the returned report command is recognized and the result code at offset 1 is zero.
+
+## Timing and input events
+
+Rev3 starts observing keydown/mousedown and keyup/mouseup **before** requesting `contact_once(hold)`, then waits for the OUT/IN exchange and both events.
+
+Unlike the Rev1 reference (which timestamps just after HID feature report OUT), Rev3 saves `finishAt = performance.now()` **after completion of the reply IN transfer**, and computes:
+
+```text
+keydownLatency = keydownEventAt - finishAt
+keyupLatency   = keyupEventAt   - finishAt - holdTimeMs
+```
+
+The user-supplied vendor JS initializes by issuing `get_version`, tests 5 warmup repetitions initially (fewer after repeats), and averages successful samples. The local independent implementation preserves the timing origin, default 5 warmups, and excludes timeout samples from the reported averages.
+
+## Safety and scope
+
+This protocol has actual physical output: contact_once electrically actuates the attached switch leads for the duration specified. Ensure wires connect only to the intended keyboard/mouse switch contacts, never power rails or unknown pads. The program limits hold duration to 1..200ms and implements no DFU, firmware updates, USB reset, or serial-number retrieval. Only the device owner should initiate measurement.
+
+A USB response timeout can leave a browser WinUSB session in a temporary busy state. Disconnect and reconnect the Rev3 tester if needed; don't run the official site and local app simultaneously.
+
+The user-provided HAR is an HTTP network archive, not a log of WebUSB transfers. These packet details are reconstructed from the JavaScript source, not observed as actual USB traffic.
