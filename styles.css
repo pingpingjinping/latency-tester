@@ -53,3 +53,6 @@ input[type=number],input[type=text]{width:100%;border:1px solid #55627d;border-r
 #rev3-comparison details{margin-top:12px}
 #rev3-comparison summary{cursor:pointer;font-size:13px}
 #rev3-comparison table{min-width:660px;font-size:13px}
+#rev3-transport-results{margin:18px 0}
+#rev3-transport-results table{min-width:520px;font-size:13px}
+#rev3-transport-results summary{cursor:pointer;font-size:13px}

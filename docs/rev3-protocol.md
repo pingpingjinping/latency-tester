@@ -72,6 +72,14 @@ and retry flag without changing existing column positions.
 
 ## Safety and scope
 
+The optional version-timing diagnostic uses only the existing `get_version` (0)
+request, with the same sequential OUT -> IN exchange. It excludes five warmups,
+records 50 replies at 50ms spacing, and never sends `contact_once`. Timing data
+are saved separately from keyboard results. Retried exchanges remain in the CSV
+but not the aggregate. Stop prevents further requests after the in-flight exchange
+has completed or reached the existing timeout. An exchange error stops the run.
+The UI blocks concurrent measurement, diagnostics and connection work.
+
 This protocol has actual physical output: contact_once electrically actuates the attached switch leads for the duration specified. Ensure wires connect only to the intended keyboard/mouse switch contacts, never power rails or unknown pads. The program limits hold duration to 1..200ms and implements no DFU, firmware updates, USB reset, or serial-number retrieval. Only the device owner should initiate measurement.
 
 A USB response timeout can leave a browser WinUSB session in a temporary busy state. Disconnect and reconnect the Rev3 tester if needed; don't run the official site and local app simultaneously.

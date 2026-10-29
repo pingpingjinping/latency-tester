@@ -37,8 +37,9 @@ Rev1 Feature report ID=0, 8바이트, 첫째 바이트 유지시간(1~200ms), �
 node --check app.js
 node --check protocol.mjs
 node --check rev3-protocol.mjs
+node --check rev3-diagnostics.mjs
 node --check server.mjs
-node --test tests/protocol.test.mjs tests/rev3-protocol.test.mjs
+node --test tests/*.test.mjs
 ```
 
 ## 권리
@@ -166,3 +167,17 @@ OUT이 stall로 재전송된 회차는 복구 대기가 섞이므로 새 추정 
 기존 CSV에는 이벤트 시각이 없으므로 새 측정이 필요합니다. 비교 시 유지시간·예열·간격·테스터 포트·브라우저를 동일하게 유지하세요.
 
 참고: [Chrome Event.timeStamp 설명](https://developer.chrome.com/blog/high-res-timestamps), [DOM Event.timeStamp 정의](https://dom.spec.whatwg.org/#dom-event-timestamp).
+
+## 접점 동작 없는 버전 조회 통신 검사
+
+Rev3 연결 영역의 **버전 통신 검사 (50회)**를 누르면 기존 `get_version` 명령(0)만 같은 OUT→IN 경로로 반복합니다. 접점 명령은 보내지 않으므로 키보드 연결 방식이나 유지시간을 바꿀 필요가 없습니다. 예열 5회 후 50회, 요청 사이 50ms이며 측정 설정 입력란과 독립적입니다. 새로 연결하면 기존 연결 초기화에서도 버전을 1회 조회하며, 그 응답은 검사 통계에 넣지 않습니다.
+
+- OUT 소요: OUT 호출 직전~완료 후
+- 응답 대기: OUT 완료 후~IN 완료 후
+- 전체 시간: OUT 호출 직전~IN 완료 후
+
+평균·응답 대기 중간값·범위, 정상/재전송/실패 회차와 개별 시간을 표시합니다. OUT이 재전송된 회차는 통계에서 제외하지만 원본 CSV에는 보존합니다. 예열 또는 측정에 오류가 나면 더 요청하지 않고 부분 결과와 오류를 남깁니다. 중단은 진행 중인 요청의 응답/기존 시간 제한을 기다린 뒤 다음 요청을 보내지 않습니다.
+
+통신 검사·기존 입력 측정·연결 작업은 동시에 실행하지 않습니다. 검사를 실행해도 이전 키보드 측정 결과와 그 CSV는 유지합니다. **통신 CSV 저장**은 별도 `rakka-rev3-version-timing-날짜.csv`를 만듭니다. 명령 ID, 프로토콜 버전, 세 시각과 구간, 재전송 여부, 오류가 들어갑니다. 펌웨어 업데이트·DFU·serial 조회는 추가하지 않습니다.
+
+접점 측정의 약 16ms 응답 대기와 버전 조회의 응답 대기를 비교하기 위한 진단입니다. 두 값이 같아도 실제 접점 시각이나 왕복의 정확한 중간점이 증명되는 것은 아닙니다. 두 값을 빼서 키보드 레이턴시의 확정 보정값으로 사용하지 않습니다.

@@ -2,9 +2,10 @@ import { IDS, validateSettings, rev1Packet, calculate, stats, csv, rev3Midpoint,
 import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 import { rev3EventMidpoint } from "./input-timing.mjs";
+import { runVersionDiagnostics, versionStats, versionCsv } from "./rev3-diagnostics.mjs";
 
 const get = id => document.getElementById(id);
-const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [] };
+const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], versionRecords: [], transportRunning: false };
 const fmt = value => Number.isFinite(value) ? value.toFixed(2) + " ms" : "—";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -18,6 +19,7 @@ function env() {
   }
   get("connect1").disabled = state.running || !navigator.hid || !window.isSecureContext;
   get("connect3").disabled = state.running || !navigator.usb || !window.isSecureContext;
+  get("rev3-transport-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
 }
 
 async function connectRev1() {
@@ -247,7 +249,8 @@ function renderEventTiming(measured) {
 function setRunning(yes) {
   state.running = yes;
   get("start").disabled = yes;
-  get("stop").hidden = !yes;
+  get("stop").hidden = !yes || !state.abort || state.transportRunning;
+  get("rev3-transport-stop").disabled = !yes || !state.transportRunning;
   for (const input of get("form").querySelectorAll("input")) input.disabled = yes;
   syncType();
   env();
@@ -309,6 +312,9 @@ function syncType() {
 async function run(event) {
   event.preventDefault();
   if (state.running) return;
+  const controller = new AbortController();
+  state.abort = controller;
+  setRunning(true);
   let settings, device;
   const revision = document.querySelector('input[name=revision]:checked').value;
   try {
@@ -330,14 +336,19 @@ async function run(event) {
     }
   } catch (e) {
     get("progress").textContent = e.message || String(e);
+    state.abort = null;
+    setRunning(false);
+    return;
+  }
+  if (controller.signal.aborted) {
+    get("progress").textContent = "측정 중단";
+    state.abort = null;
+    setRunning(false);
     return;
   }
   state.records = [];
   state.lastRevision = revision;
   render();
-  const controller = new AbortController();
-  state.abort = controller;
-  setRunning(true);
   let count = 0;
   try {
     const total = settings.warmup + settings.count;
@@ -369,11 +380,74 @@ async function run(event) {
   }
 }
 
-get("connect1").addEventListener("click", async () => {
-  try { await connectRev1(); } catch (e) { get("status1").textContent = e.message || String(e); }
-});
-get("connect3").addEventListener("click", async () => {
-  try { await connectRev3(); } catch (e) { get("status3").textContent = e.message || String(e); }
+function renderVersionDiagnostics() {
+  const s = versionStats(state.versionRecords);
+  get("rev3-transport-summary").textContent = s.reply
+    ? "응답 대기 평균 " + fmt(s.reply.avg) + " · 중간값 " + fmt(s.reply.median) +
+      " · 범위 " + fmt(s.reply.min) + "~" + fmt(s.reply.max) +
+      " · OUT 소요 평균 " + fmt(s.out.avg) + " · 전체 평균 " + fmt(s.total.avg)
+    : "통신 검사 결과를 기다리는 중입니다.";
+  get("rev3-transport-count").textContent = "평균에 포함 " + s.count + "회 · 재전송 제외 " + s.retried + "회 · 실패 " + s.failed + "회";
+  get("rev3-transport-download").disabled = !state.versionRecords.length;
+  const rows = get("rev3-transport-rows");
+  rows.replaceChildren();
+  for (const r of state.versionRecords) {
+    const row = rows.insertRow();
+    for (const value of [r.phase === "warmup" ? "예열" : r.index,
+      fmt(r.outDuration), fmt(r.replyWait), fmt(r.totalTime),
+      r.error ? "실패: " + r.error : r.outRetried ? "재전송 · 평균 제외" : "성공"]) {
+      row.insertCell().textContent = String(value);
+    }
+  }
+}
+
+async function runTransportDiagnostic() {
+  if (state.running) return;
+  const controller = new AbortController();
+  state.abort = controller;
+  state.transportRunning = true;
+  setRunning(true);
+  state.versionRecords = [];
+  get("rev3-transport-results").hidden = false;
+  renderVersionDiagnostics();
+  const progress = get("rev3-transport-progress");
+  progress.textContent = "Rev3 연결 중…";
+  try {
+    const device = await connectRev3();
+    const result = await runVersionDiagnostics(device, {
+      signal: controller.signal,
+      onProgress: p => { progress.textContent = (p.warming ? "통신 예열 " : "버전 조회 ") + p.index + "/" + p.total; },
+      onRecord: row => { state.versionRecords.push(row); renderVersionDiagnostics(); }
+    });
+    progress.textContent = result.aborted ? "통신 검사 중단" :
+      result.records.some(r => r.error) ? "오류로 통신 검사 중단 · 재연결 후 다시 검사하세요." : "통신 검사 완료 · 50회";
+  } catch (e) {
+    progress.textContent = "통신 검사 실패: " + (e.message || String(e));
+  } finally {
+    state.abort = null;
+    state.transportRunning = false;
+    setRunning(false);
+  }
+}
+
+for (const [id, connect, status] of [["connect1", connectRev1, "status1"], ["connect3", connectRev3, "status3"]]) {
+  get(id).addEventListener("click", async () => {
+    if (state.running) return;
+    setRunning(true);
+    try { await connect(); } catch (e) { get(status).textContent = e.message || String(e); }
+    finally { setRunning(false); }
+  });
+}
+get("rev3-transport-start").addEventListener("click", runTransportDiagnostic);
+get("rev3-transport-stop").addEventListener("click", () => state.abort?.abort());
+get("rev3-transport-download").addEventListener("click", () => {
+  if (!state.versionRecords.length) return;
+  const blob = new Blob([versionCsv(state.versionRecords)], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "rakka-rev3-version-timing-" + new Date().toISOString().slice(0, 10) + ".csv";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 get("form").addEventListener("submit", run);
 get("target-picker").addEventListener("click", () => {
