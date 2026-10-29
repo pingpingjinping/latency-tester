@@ -121,6 +121,40 @@ export class Rev3Session {
   version() {
     return this.exchange(rev3Packet(REV3_COMMANDS.VERSION), REV3_COMMANDS.VERSION);
   }
+  // Diagnostic only. Never accepts a command/hold argument, so this path cannot
+  // actuate a contact. Each completion is timestamped in its own callback: IN
+  // may finish before OUT, which must not be hidden by awaiting OUT first.
+  async versionPrearmed() {
+    if (!this.opened) throw new Error("Rev3 연결이 해제됐습니다.");
+    let timer, inSubmittedAt, startedAt, sentAt, receivedAt;
+    try {
+      inSubmittedAt = performance.now();
+      const incoming = this.device.transferIn(this.info.inEndpoint, REV3.packetSize).then(response => {
+        receivedAt = performance.now();
+        if (response.status !== "ok") throw new Error("Rev3 수신 실패: " + response.status);
+        return parseRev3Response(response.data, REV3_COMMANDS.VERSION);
+      });
+      // Handle rejection even if transferOut throws synchronously below.
+      incoming.catch(() => {});
+      startedAt = performance.now();
+      const outgoing = this.device.transferOut(this.info.outEndpoint, rev3Packet(REV3_COMMANDS.VERSION)).then(output => {
+        sentAt = performance.now();
+        if (output.status !== "ok") throw new Error("Rev3 전송 실패: " + output.status);
+      });
+      const [, reply] = await Promise.race([
+        Promise.all([outgoing, incoming]),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Rev3 순서 비교 시간 초과 (2.5초)")), 2500); })
+      ]);
+      return { ...reply, inSubmittedAt, startedAt, sentAt, receivedAt,
+        outRetried: false, transferOrder: "prearmed" };
+    } catch (error) {
+      // Close on any failure, including failed OUT with an outstanding IN.
+      // Do not retry the OUT or leave a read queued for the next measurement.
+      this.closed = true;
+      try { await Promise.race([this.device.close(), new Promise(resolve => setTimeout(resolve, 700))]); } catch {}
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
   contactOnce(holdTime) {
     return this.exchange(rev3Packet(REV3_COMMANDS.CONTACT_ONCE, holdTime), REV3_COMMANDS.CONTACT_ONCE);
   }

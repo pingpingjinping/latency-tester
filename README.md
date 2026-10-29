@@ -194,3 +194,20 @@ Rev3 연결 영역의 **버전 통신 검사 (50회)**를 누르면 기존 `get_
 **설정 JSON 저장**으로 `rakka-rev3-usb-descriptors.json`을 저장하세요. 선택한 인터페이스뿐 아니라 구성 설명자 원본 바이트(hex), 해석한 인터페이스 목록, 요청 index/길이도 포함합니다. 읽기가 거부되거나 설명자가 잘못되면 성공처럼 표시하지 않고 실패 이유와 받은 원본을 저장할 수 있습니다. 시간 초과 시 진행 중인 요청을 개별 취소할 수 없어 세션을 닫고 재연결하도록 합니다.
 
 참고: [WebUSB controlTransferIn](https://wicg.github.io/webusb/#dom-usbdevice-controltransferin), [Microsoft USB_ENDPOINT_DESCRIPTOR / bInterval](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/usbspec/ns-usbspec-_usb_endpoint_descriptor).
+
+## 버전 조회 수신 순서 비교
+
+**수신 순서 비교 (각 50회)**는 기존 OUT 완료 후 IN을 요청하는 방식과, IN 수신을 먼저 요청한 뒤 OUT을 보내는 방식을 비교합니다. 두 방식 모두 버전 명령 0만 사용합니다. 키보드 접점 측정의 요청 순서·계산식은 바꾸지 않습니다.
+
+각 방식 5회 예열 후 각 50회 측정하고, 쌍마다 AB/BA 순서를 교대해 어느 방식을 먼저 검사하는지 균형을 맞춥니다. 요청 간격은 50ms입니다. 정상적으로 양쪽 방식이 완료되고 재전송이 없었던 동일 쌍만 요약에 포함합니다. 중단·오류·재전송·짝이 없는 행도 CSV에는 보존합니다.
+
+수신 먼저 방식은 IN/OUT 각각의 Promise 완료 콜백에서 시각을 기록합니다. OUT을 기다린 뒤 IN 완료 시각을 찍지 않습니다. 오류나 시간 초과 시 세션을 닫고 추가 요청을 중단하며, 실패한 OUT을 수신 대기가 남은 상태에서 재전송하지 않습니다.
+
+- `reply_wait_ms`: IN 완료−OUT 완료. 수신 먼저 방식에서 음수가 될 수 있으며 절댓값이나 잘라내기를 하지 않습니다.
+- `in_elapsed_ms`: OUT 시작→IN 완료.
+- `total_ms`: OUT 시작→IN·OUT 양쪽 완료. 수신이 먼저 끝나도 OUT 완료를 포함합니다. 기존 순차 방식에서는 이전 의미와 같습니다.
+- `in_submitted_at_ms`: 수신 먼저 방식의 IN 요청 직전 시각. 기존 방식은 별도로 기록하지 않아 빈 칸입니다.
+
+통신 CSV의 기존 13개 컬럼 뒤에 `mode`, `pair`, `in_submitted_at_ms`, `in_elapsed_ms`, `in_before_out_complete`를 추가합니다. 파일명은 비교 시 `rakka-rev3-version-order-날짜.csv`입니다. `mode`는 `sequential`(기존) 또는 `prearmed`(수신 먼저)입니다.
+
+수신 먼저 방식의 IN−OUT 완료 차이만 줄었다고 키보드 지연이나 절대 정확도가 개선됐다는 뜻은 아닙니다. IN 완료까지의 시간과 양쪽 완료까지의 시간, 동일 쌍의 차이를 함께 봐야 합니다. 장치 응답에 회차 식별자가 없어 IN이 먼저 완료될 때 이전 응답과 이번 요청의 응답을 시각만으로 구분할 수 없습니다. 외부 프로그램이나 다른 탭을 함께 연결하지 마세요.

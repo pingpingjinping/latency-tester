@@ -19,7 +19,7 @@
 <hr>
 <div class="device"><div><strong>Rev3</strong> <small>WebUSB · 5249:4C65</small></div><button id="connect3">Rev3 연결</button></div>
 <p id="status3" class="muted" role="status">연결되지 않음 · 새로 복원한 명령 규격으로 측정 지원</p>
-<div class="rev3-tools"><button id="rev3-transport-start" type="button" class="secondary">버전 통신 검사 (50회)</button><button id="rev3-descriptor-start" type="button" class="secondary">USB 주기 설정 읽기</button></div>
+<div class="rev3-tools"><button id="rev3-transport-start" type="button" class="secondary">버전 통신 검사 (50회)</button><button id="rev3-order-start" type="button" class="secondary">수신 순서 비교 (각 50회)</button><button id="rev3-descriptor-start" type="button" class="secondary">USB 주기 설정 읽기</button></div>
 <p class="muted small">접점을 누르지 않고 버전 조회만 반복해 USB 응답 대기를 확인합니다. 예열 5회 후 50회 검사합니다.</p>
 <p class="muted small">Rev3는 원본 RAKKA 2023년 웹 코드에서 확인한 64바이트 프로토콜을 사용합니다. 펌웨어 업데이트 명령은 없습니다.</p>
 <hr>
@@ -55,12 +55,15 @@
 <div class="overflow"><table><thead><tr><th>방향</th><th>주소</th><th>종류</th><th>최대 패킷</th><th>bInterval 원본</th></tr></thead><tbody id="rev3-descriptor-rows"></tbody></table></div>
 </section>
 <section id="rev3-transport-results" class="panel results" hidden>
-<div class="result-top"><div><h2>Rev3 버전 조회 통신 검사</h2><p id="rev3-transport-progress" class="muted" role="status">아직 검사하지 않았습니다.</p></div></div>
+<div class="result-top"><div><h2 id="rev3-transport-title">Rev3 버전 조회 통신 검사</h2><p id="rev3-transport-progress" class="muted" role="status">아직 검사하지 않았습니다.</p></div></div>
 <div class="actions"><button id="rev3-transport-stop" type="button" class="secondary" disabled>통신 검사 중단</button><button id="rev3-transport-download" type="button" class="secondary" disabled>통신 CSV 저장</button></div>
 <p id="rev3-transport-summary">통신 검사 결과를 기다리는 중입니다.</p>
+<div id="rev3-order-summary" hidden><p id="rev3-order-sequential"></p><p id="rev3-order-prearmed"></p><p id="rev3-order-difference"></p></div>
 <p id="rev3-transport-count" class="muted small"></p>
 <p class="muted small">이 값은 키보드 레이턴시가 아닙니다. 접점 측정의 USB 응답 대기와 비교하세요. OUT 재전송 회차는 평균에서 제외하며 CSV에는 보존합니다.</p>
-<details><summary>회차별 통신 시간</summary><div class="overflow"><table><thead><tr><th>회차</th><th>OUT 소요</th><th>응답 대기</th><th>전체</th><th>상태</th></tr></thead><tbody id="rev3-transport-rows"></tbody></table></div></details>
+<p class="muted small">순서 비교는 기존·수신 먼저를 각 5회 예열한 뒤 각 50회 검사합니다. 같은 쌍의 두 방식이 모두 성공한 경우만 평균을 비교합니다. IN−OUT 완료 차이는 수신이 먼저 끝나면 음수이며 그대로 기록합니다. 양쪽 완료 시간은 OUT 시작부터 IN·OUT이 모두 완료될 때까지입니다.</p>
+<p class="muted small">버전 응답에는 회차 식별자가 없습니다. IN이 먼저 완료되면 이전 응답인지 이번 요청의 응답인지 시각만으로 구분할 수 없으므로, 시간 감소를 실제 응답속도 개선으로 확정하지 마세요.</p>
+<details><summary>회차별 통신 시간</summary><div class="overflow"><table><thead><tr><th>회차</th><th>방식</th><th>OUT 소요</th><th>IN−OUT 완료</th><th>양쪽 완료까지</th><th>상태</th></tr></thead><tbody id="rev3-transport-rows"></tbody></table></div></details>
 </section>
 <section class="panel results">
 <div class="result-top"><div><h2>측정 결과</h2><p class="muted" id="progress">아직 측정하지 않았습니다.</p></div><button id="download" class="secondary" disabled>CSV 저장</button></div>

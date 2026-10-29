@@ -2,11 +2,11 @@ import { IDS, validateSettings, rev1Packet, calculate, stats, csv, rev3Midpoint,
 import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 import { rev3EventMidpoint } from "./input-timing.mjs";
-import { runVersionDiagnostics, versionStats, versionCsv } from "./rev3-diagnostics.mjs";
+import { runVersionDiagnostics, runVersionComparison, versionStats, versionComparisonStats, versionCsv } from "./rev3-diagnostics.mjs";
 import { readRev3Descriptors } from "./usb-descriptors.mjs";
 
 const get = id => document.getElementById(id);
-const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], versionRecords: [], transportRunning: false, descriptors: null };
+const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], versionRecords: [], transportRunning: false, versionComparison: false, descriptors: null };
 const fmt = value => Number.isFinite(value) ? value.toFixed(2) + " ms" : "—";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -22,6 +22,7 @@ function env() {
   get("connect3").disabled = state.running || !navigator.usb || !window.isSecureContext;
   get("rev3-transport-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
   get("rev3-descriptor-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
+  get("rev3-order-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
 }
 
 async function connectRev1() {
@@ -384,6 +385,20 @@ async function run(event) {
 
 function renderVersionDiagnostics() {
   const s = versionStats(state.versionRecords);
+  get("rev3-transport-summary").hidden = state.versionComparison;
+  get("rev3-order-summary").hidden = !state.versionComparison;
+  if (state.versionComparison) {
+    const paired = versionComparisonStats(state.versionRecords);
+    const describe = (name, result) => result.reply
+      ? name + " · IN−OUT 완료 평균 " + fmt(result.reply.avg) +
+        " · IN 완료까지 평균 " + fmt(result.inElapsed.avg) +
+        " · 양쪽 완료까지 평균 " + fmt(result.total.avg)
+      : name + " · 비교 데이터를 기다리는 중입니다.";
+    get("rev3-order-sequential").textContent = describe("기존 순서", paired.sequential);
+    get("rev3-order-prearmed").textContent = describe("수신 대기 먼저", paired.prearmed);
+    get("rev3-order-difference").textContent = "완료된 동일 쌍 " + paired.count +
+      "개 · 양쪽 완료까지의 시간 차이 (수신 먼저−기존) " + fmt(paired.totalDifference?.avg);
+  }
   get("rev3-transport-summary").textContent = s.reply
     ? "응답 대기 평균 " + fmt(s.reply.avg) + " · 중간값 " + fmt(s.reply.median) +
       " · 범위 " + fmt(s.reply.min) + "~" + fmt(s.reply.max) +
@@ -396,33 +411,39 @@ function renderVersionDiagnostics() {
   for (const r of state.versionRecords) {
     const row = rows.insertRow();
     for (const value of [r.phase === "warmup" ? "예열" : r.index,
+      r.mode === "prearmed" ? "수신 먼저" : "기존",
       fmt(r.outDuration), fmt(r.replyWait), fmt(r.totalTime),
-      r.error ? "실패: " + r.error : r.outRetried ? "재전송 · 평균 제외" : "성공"]) {
+      r.error ? "실패: " + r.error : r.outRetried ? "재전송 · 평균 제외" : r.inBeforeOutComplete ? "IN 먼저 완료" : "성공"]) {
       row.insertCell().textContent = String(value);
     }
   }
 }
 
-async function runTransportDiagnostic() {
+async function runTransportDiagnostic(comparison = false) {
   if (state.running) return;
   const controller = new AbortController();
   state.abort = controller;
   state.transportRunning = true;
+  state.versionComparison = comparison;
   setRunning(true);
   state.versionRecords = [];
   get("rev3-transport-results").hidden = false;
+  get("rev3-transport-title").textContent = comparison ? "Rev3 수신 순서 비교" : "Rev3 버전 조회 통신 검사";
   renderVersionDiagnostics();
   const progress = get("rev3-transport-progress");
   progress.textContent = "Rev3 연결 중…";
   try {
     const device = await connectRev3();
-    const result = await runVersionDiagnostics(device, {
+    const runner = comparison ? runVersionComparison : runVersionDiagnostics;
+    const result = await runner(device, {
       signal: controller.signal,
-      onProgress: p => { progress.textContent = (p.warming ? "통신 예열 " : "버전 조회 ") + p.index + "/" + p.total; },
+      onProgress: p => { progress.textContent = (comparison ? (p.mode === "prearmed" ? "수신 먼저 · " : "기존 · ") : "") +
+        (p.warming ? "통신 예열 " : "버전 조회 ") + p.index + "/" + p.total; },
       onRecord: row => { state.versionRecords.push(row); renderVersionDiagnostics(); }
     });
     progress.textContent = result.aborted ? "통신 검사 중단" :
-      result.records.some(r => r.error) ? "오류로 통신 검사 중단 · 재연결 후 다시 검사하세요." : "통신 검사 완료 · 50회";
+      result.records.some(r => r.error) ? "오류로 통신 검사 중단 · 재연결 후 다시 검사하세요." :
+        comparison ? "수신 순서 비교 완료 · 각 50회" : "통신 검사 완료 · 50회";
   } catch (e) {
     progress.textContent = "통신 검사 실패: " + (e.message || String(e));
   } finally {
@@ -483,14 +504,15 @@ for (const [id, connect, status] of [["connect1", connectRev1, "status1"], ["con
     finally { setRunning(false); }
   });
 }
-get("rev3-transport-start").addEventListener("click", runTransportDiagnostic);
+get("rev3-transport-start").addEventListener("click", () => runTransportDiagnostic(false));
+get("rev3-order-start").addEventListener("click", () => runTransportDiagnostic(true));
 get("rev3-transport-stop").addEventListener("click", () => state.abort?.abort());
 get("rev3-transport-download").addEventListener("click", () => {
   if (!state.versionRecords.length) return;
   const blob = new Blob([versionCsv(state.versionRecords)], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "rakka-rev3-version-timing-" + new Date().toISOString().slice(0, 10) + ".csv";
+  link.download = (state.versionComparison ? "rakka-rev3-version-order-" : "rakka-rev3-version-timing-") + new Date().toISOString().slice(0, 10) + ".csv";
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });

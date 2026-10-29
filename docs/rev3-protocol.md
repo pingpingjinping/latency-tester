@@ -72,6 +72,15 @@ and retry flag without changing existing column positions.
 
 ## Safety and scope
 
+The optional VERSION-only ordering comparison registers `transferIn` before
+`transferOut` in the prearmed method. It does not expose this ordering for
+`contact_once`. IN and OUT completion times are captured independently. Either
+completion order is valid; signed IN-minus-OUT times are preserved and total time
+ends at the later completion. An error/timeout closes the prearmed session without
+retrying OUT while IN is pending. A/B pairs alternate AB and BA; statistics compare
+only complete successful pairs without retries. There is no new per-request ID in
+the firmware, and a faster VERSION exchange does not establish contact timing.
+
 The optional endpoint descriptor read uses only inbound standard GET_DESCRIPTOR
 (request 6, configuration descriptor type 2, recipient device). It reads the
 configuration headers by descriptor index until the active configuration value
