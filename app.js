@@ -3,9 +3,10 @@ import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 import { rev3EventMidpoint } from "./input-timing.mjs";
 import { runVersionDiagnostics, versionStats, versionCsv } from "./rev3-diagnostics.mjs";
+import { readRev3Descriptors } from "./usb-descriptors.mjs";
 
 const get = id => document.getElementById(id);
-const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], versionRecords: [], transportRunning: false };
+const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], versionRecords: [], transportRunning: false, descriptors: null };
 const fmt = value => Number.isFinite(value) ? value.toFixed(2) + " ms" : "—";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -20,6 +21,7 @@ function env() {
   get("connect1").disabled = state.running || !navigator.hid || !window.isSecureContext;
   get("connect3").disabled = state.running || !navigator.usb || !window.isSecureContext;
   get("rev3-transport-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
+  get("rev3-descriptor-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
 }
 
 async function connectRev1() {
@@ -429,6 +431,49 @@ async function runTransportDiagnostic() {
     setRunning(false);
   }
 }
+
+async function readUsbSettings() {
+  if (state.running) return;
+  setRunning(true);
+  state.descriptors = null;
+  get("rev3-descriptor-download").disabled = true;
+  get("rev3-descriptor-results").hidden = false;
+  const progress = get("rev3-descriptor-progress");
+  const rows = get("rev3-descriptor-rows");
+  rows.replaceChildren();
+  progress.textContent = "USB 설정을 읽는 중…";
+  try {
+    const session = await connectRev3();
+    const report = await readRev3Descriptors(session);
+    state.descriptors = report;
+    if (report.status !== "ok") throw new Error(report.error);
+    for (const endpoint of report.selectedInterface.endpoints) {
+      const row = rows.insertRow();
+      for (const value of [endpoint.direction.toUpperCase(), "0x" + endpoint.address.toString(16).padStart(2, "0"),
+        endpoint.transferType, endpoint.maxPacketSize + " B", endpoint.bInterval]) {
+        row.insertCell().textContent = String(value);
+      }
+    }
+    progress.textContent = "USB 설정 읽기 완료 · 구성 " + report.configurationValue +
+      " / 인터페이스 " + report.selectedInterface.interfaceNumber;
+  } catch (e) {
+    progress.textContent = "USB 설정 읽기 실패: " + (e.message || String(e));
+  } finally {
+    get("rev3-descriptor-download").disabled = !state.descriptors;
+    setRunning(false);
+  }
+}
+
+get("rev3-descriptor-start").addEventListener("click", readUsbSettings);
+get("rev3-descriptor-download").addEventListener("click", () => {
+  if (!state.descriptors) return;
+  const blob = new Blob([JSON.stringify(state.descriptors, null, 2)], { type: "application/json;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "rakka-rev3-usb-descriptors.json";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+});
 
 for (const [id, connect, status] of [["connect1", connectRev1, "status1"], ["connect3", connectRev3, "status3"]]) {
   get(id).addEventListener("click", async () => {

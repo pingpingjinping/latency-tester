@@ -38,6 +38,7 @@ node --check app.js
 node --check protocol.mjs
 node --check rev3-protocol.mjs
 node --check rev3-diagnostics.mjs
+node --check usb-descriptors.mjs
 node --check server.mjs
 node --test tests/*.test.mjs
 ```
@@ -181,3 +182,15 @@ Rev3 연결 영역의 **버전 통신 검사 (50회)**를 누르면 기존 `get_
 통신 검사·기존 입력 측정·연결 작업은 동시에 실행하지 않습니다. 검사를 실행해도 이전 키보드 측정 결과와 그 CSV는 유지합니다. **통신 CSV 저장**은 별도 `rakka-rev3-version-timing-날짜.csv`를 만듭니다. 명령 ID, 프로토콜 버전, 세 시각과 구간, 재전송 여부, 오류가 들어갑니다. 펌웨어 업데이트·DFU·serial 조회는 추가하지 않습니다.
 
 접점 측정의 약 16ms 응답 대기와 버전 조회의 응답 대기를 비교하기 위한 진단입니다. 두 값이 같아도 실제 접점 시각이나 왕복의 정확한 중간점이 증명되는 것은 아닙니다. 두 값을 빼서 키보드 레이턴시의 확정 보정값으로 사용하지 않습니다.
+
+## USB 엔드포인트 주기 설정 읽기
+
+**USB 주기 설정 읽기**는 현재 Rev3 구성의 표준 Configuration Descriptor를 읽어, 사용 중인 인터페이스의 IN/OUT 주소·전송 종류·패킷 크기·`bInterval` 원본값을 표시합니다. 선택한 구성의 descriptor index를 찾아 헤더 9바이트와 전체 설명자를 순서대로 요청합니다. 구성 값이 descriptor index와 같다고 가정하지 않습니다.
+
+요청은 `controlTransferIn`의 표준 `GET_DESCRIPTOR`(6), descriptor type Configuration(2), recipient Device만 사용합니다. 접점 명령이나 control OUT, 구성 변경, 펌웨어·DFU·serial 조회는 추가하지 않습니다. 처음 연결할 때 기존 연결 초기화의 버전 조회는 실행될 수 있습니다. 기존 측정/통신 검사와 동시에 읽지 않습니다.
+
+`bInterval`은 원본 필드이며 숫자 자체를 ms로 확정하지 않습니다. 실제 주기는 장치 연결 속도와 호스트에 따라 달라집니다. USB 버전 지원 여부와 실제 연결 속도도 같은 의미가 아니므로 결과의 `negotiatedSpeed`는 `unknown`으로 남깁니다.
+
+**설정 JSON 저장**으로 `rakka-rev3-usb-descriptors.json`을 저장하세요. 선택한 인터페이스뿐 아니라 구성 설명자 원본 바이트(hex), 해석한 인터페이스 목록, 요청 index/길이도 포함합니다. 읽기가 거부되거나 설명자가 잘못되면 성공처럼 표시하지 않고 실패 이유와 받은 원본을 저장할 수 있습니다. 시간 초과 시 진행 중인 요청을 개별 취소할 수 없어 세션을 닫고 재연결하도록 합니다.
+
+참고: [WebUSB controlTransferIn](https://wicg.github.io/webusb/#dom-usbdevice-controltransferin), [Microsoft USB_ENDPOINT_DESCRIPTOR / bInterval](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/usbspec/ns-usbspec-_usb_endpoint_descriptor).

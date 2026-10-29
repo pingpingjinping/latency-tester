@@ -19,7 +19,7 @@
 <hr>
 <div class="device"><div><strong>Rev3</strong> <small>WebUSB · 5249:4C65</small></div><button id="connect3">Rev3 연결</button></div>
 <p id="status3" class="muted" role="status">연결되지 않음 · 새로 복원한 명령 규격으로 측정 지원</p>
-<button id="rev3-transport-start" type="button" class="secondary">버전 통신 검사 (50회)</button>
+<div class="rev3-tools"><button id="rev3-transport-start" type="button" class="secondary">버전 통신 검사 (50회)</button><button id="rev3-descriptor-start" type="button" class="secondary">USB 주기 설정 읽기</button></div>
 <p class="muted small">접점을 누르지 않고 버전 조회만 반복해 USB 응답 대기를 확인합니다. 예열 5회 후 50회 검사합니다.</p>
 <p class="muted small">Rev3는 원본 RAKKA 2023년 웹 코드에서 확인한 64바이트 프로토콜을 사용합니다. 펌웨어 업데이트 명령은 없습니다.</p>
 <hr>
@@ -49,6 +49,11 @@
 </form>
 </section>
 </div>
+<section id="rev3-descriptor-results" class="panel results" hidden>
+<div class="result-top"><div><h2>Rev3 USB 엔드포인트 설정</h2><p id="rev3-descriptor-progress" class="muted" role="status">아직 읽지 않았습니다.</p></div><button id="rev3-descriptor-download" type="button" class="secondary" disabled>설정 JSON 저장</button></div>
+<p class="muted small">장치가 등록한 bInterval 원본값을 읽습니다. 설정은 변경하지 않습니다. 실제 주기(ms)는 연결 속도와 호스트에 따라 달라지므로 이 화면에서는 확정하지 않습니다.</p>
+<div class="overflow"><table><thead><tr><th>방향</th><th>주소</th><th>종류</th><th>최대 패킷</th><th>bInterval 원본</th></tr></thead><tbody id="rev3-descriptor-rows"></tbody></table></div>
+</section>
 <section id="rev3-transport-results" class="panel results" hidden>
 <div class="result-top"><div><h2>Rev3 버전 조회 통신 검사</h2><p id="rev3-transport-progress" class="muted" role="status">아직 검사하지 않았습니다.</p></div></div>
 <div class="actions"><button id="rev3-transport-stop" type="button" class="secondary" disabled>통신 검사 중단</button><button id="rev3-transport-download" type="button" class="secondary" disabled>통신 CSV 저장</button></div>

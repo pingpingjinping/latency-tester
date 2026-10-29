@@ -72,6 +72,15 @@ and retry flag without changing existing column positions.
 
 ## Safety and scope
 
+The optional endpoint descriptor read uses only inbound standard GET_DESCRIPTOR
+(request 6, configuration descriptor type 2, recipient device). It reads the
+configuration headers by descriptor index until the active configuration value
+matches, then retrieves and validates that full descriptor. It preserves raw
+bytes and bInterval fields without inferring negotiated speed or milliseconds.
+It issues no control OUT, contact command or serial-string query. The UI excludes
+other operations during the read. A timeout closes the session to avoid reusing
+an outstanding control request; failed reports retain received raw data.
+
 The optional version-timing diagnostic uses only the existing `get_version` (0)
 request, with the same sequential OUT -> IN exchange. It excludes five warmups,
 records 50 replies at 50ms spacing, and never sends `contact_once`. Timing data
