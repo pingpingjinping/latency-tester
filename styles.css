@@ -50,3 +50,6 @@ input[type=number],input[type=text]{width:100%;border:1px solid #55627d;border-r
 .rev3-original{display:flex;flex-wrap:wrap;column-gap:18px;row-gap:6px;margin:4px 0 10px;color:var(--muted);font-size:13px}
 .rev3-original strong{font-size:14px;color:var(--text);font-variant-numeric:tabular-nums}
 #rev3-comparison>.muted.small{margin:6px 0}
+#rev3-comparison details{margin-top:12px}
+#rev3-comparison summary{cursor:pointer;font-size:13px}
+#rev3-comparison table{min-width:660px;font-size:13px}

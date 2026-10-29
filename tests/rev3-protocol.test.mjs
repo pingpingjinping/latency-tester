@@ -37,7 +37,9 @@ test("Rev3 reply verifies command and resultCode before data", () => {
   assert.throws(() => parseRev3Response(response(0, 20), 2), /불일치/);
   assert.throws(() => parseRev3Response(new DataView(new ArrayBuffer(2)), 0), /짧습니다/);
 });
-test("Rev3 WebUSB sends OUT before IN and records post-IN timestamp", async () => {
+test("Rev3 WebUSB records pre-OUT, post-OUT and post-IN timestamps", async t => {
+  let now = 100;
+  t.mock.method(performance, "now", () => now);
   const events = [];
   const usb = {
     opened: true,
@@ -47,12 +49,14 @@ test("Rev3 WebUSB sends OUT before IN and records post-IN timestamp", async () =
       assert.equal(packet.length, 64);
       assert.equal(packet[0], 2);
       assert.equal(new DataView(packet.buffer).getUint32(2, true), 20);
+      now = 104;
       return { status: "ok" };
     },
     async transferIn(endpoint, size) {
       events.push("IN");
       assert.equal(endpoint, 1);
       assert.equal(size, 64);
+      now = 120;
       return { status: "ok", data: response(2, 20) };
     }
   };
@@ -60,7 +64,38 @@ test("Rev3 WebUSB sends OUT before IN and records post-IN timestamp", async () =
   const result = await session.contactOnce(20);
   assert.deepEqual(events, ["OUT", "IN"]);
   assert.equal(result.value, 20);
-  assert.ok(result.receivedAt >= result.sentAt);
+  assert.equal(result.startedAt, 100);
+  assert.equal(result.sentAt, 104);
+  assert.equal(result.receivedAt, 120);
+  assert.equal(result.outRetried, false);
+});
+
+test("Rev3 OUT stall recovery is flagged without changing the measurement packet", async t => {
+  let now = 100, attempt = 0;
+  t.mock.method(performance, "now", () => now);
+  const events = [];
+  const usb = {
+    opened: true,
+    async transferOut(_endpoint, packet) {
+      events.push("OUT");
+      assert.deepEqual([...packet.slice(0, 6)], [2, 0, 20, 0, 0, 0]);
+      now += 4;
+      return { status: ++attempt === 1 ? "stall" : "ok" };
+    },
+    async clearHalt(direction, endpoint) {
+      assert.equal(direction, "out");
+      assert.equal(endpoint, 1);
+      events.push("clear");
+      now += 20;
+    },
+    async transferIn() { events.push("IN"); now += 16; return { status: "ok", data: response(2, 20) }; }
+  };
+  const result = await new Rev3Session(usb, { inEndpoint: 1, outEndpoint: 1 }).contactOnce(20);
+  assert.deepEqual(events, ["OUT", "clear", "OUT", "IN"]);
+  assert.equal(result.outRetried, true);
+  assert.equal(result.startedAt, 100);
+  assert.equal(result.sentAt, 128);
+  assert.equal(result.receivedAt, 144);
 });
 test("Rev3 getVersion uses command 0 and decodes little-endian version", async () => {
   const usb = {

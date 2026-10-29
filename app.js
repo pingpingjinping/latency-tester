@@ -1,4 +1,4 @@
-import { IDS, validateSettings, rev1Packet, calculate, stats, csv, rev3Midpoint } from "./protocol.mjs";
+import { IDS, validateSettings, rev1Packet, calculate, stats, csv, rev3Midpoint, rev3TransactionMidpoint } from "./protocol.mjs";
 import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 
@@ -102,7 +102,16 @@ async function measureOnce(device, revision, settings, signal) {
         ...official,
         downFromOut: outBased.down,
         upFromOut: outBased.up,
-        usbReplyWait: reply.receivedAt - reply.sentAt
+        usbReplyWait: reply.receivedAt - reply.sentAt,
+        usbOutDuration: reply.sentAt - reply.startedAt,
+        usbTransactionTime: reply.receivedAt - reply.startedAt,
+        outRetried: reply.outRetried,
+        usbStartedAt: reply.startedAt,
+        usbSentAt: reply.sentAt,
+        usbReceivedAt: reply.receivedAt,
+        downAt: t.downAt,
+        upAt: t.upAt,
+        holdTime: settings.hold
       };
     }
     // Rev1 Feature Report byte 1 always ZERO (1 would enter DFU mode).
@@ -140,6 +149,29 @@ function render() {
   const measured = state.records.filter(r => Number.isFinite(r.usbReplyWait));
   diagnostic.hidden = state.lastRevision !== "rev3";
   if (state.lastRevision === "rev3") {
+    const timingRows = get("rev3-timing-rows");
+    timingRows.replaceChildren();
+    const comparable = measured.filter(r => Number.isFinite(rev3TransactionMidpoint(r).down));
+    const candidateDown = stats(comparable.map(r => rev3TransactionMidpoint(r).down));
+    const candidateUp = stats(comparable.map(r => rev3TransactionMidpoint(r).up));
+    get("rev3-transaction-down").textContent = candidateDown ? fmt(candidateDown.avg) : "—";
+    get("rev3-transaction-up").textContent = candidateUp ? fmt(candidateUp.avg) : "—";
+    const outDuration = stats(comparable.map(r => r.usbOutDuration));
+    const negativeCount = (getValue, key) => comparable.filter(r => getValue(r)[key] < 0).length;
+    get("rev3-transaction-details").textContent = comparable.length
+      ? "동일 회차 비교 " + comparable.length + "회 · OUT 전송 소요 평균 " + fmt(outDuration?.avg) +
+        " · 새 추정값 증가량 평균 " + fmt(outDuration ? outDuration.avg / 2 : NaN) +
+        " · 음수 회차 (기존→새): Keydown " + negativeCount(rev3Midpoint, "down") + "→" + negativeCount(rev3TransactionMidpoint, "down") +
+        " / Keyup " + negativeCount(rev3Midpoint, "up") + "→" + negativeCount(rev3TransactionMidpoint, "up")
+      : "새 측정부터 비교할 수 있습니다. OUT 재전송 회차는 새 추정값에서 제외합니다.";
+    for (const r of state.records) {
+      const old = rev3Midpoint(r), candidate = rev3TransactionMidpoint(r);
+      const tr = timingRows.insertRow();
+      for (const value of [r.index, fmt(old.down), fmt(old.up), fmt(candidate.down), fmt(candidate.up),
+        r.error ? "실패" : r.outRetried ? "OUT 재전송 · 비교 제외" : ""]) {
+        tr.insertCell().textContent = String(value);
+      }
+    }
     const gap = stats(measured.map(r => r.usbReplyWait));
     const downOut = stats(measured.map(r => r.downFromOut));
     const upOut = stats(measured.map(r => r.upFromOut));

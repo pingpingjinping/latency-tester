@@ -59,6 +59,17 @@
   </div>
   <p class="muted small" id="rev3-compare-details">측정 데이터를 기다리는 중입니다.</p>
   <p class="muted small">위 큰 측정값은 매 회차의 USB OUT→IN 응답 시간 절반을 더한 <strong>중간점 추정값</strong>입니다. 접점 작동 시점으로 검증된 보정은 아닙니다. CSV에는 원본과 추정값을 모두 저장합니다.</p>
+  <hr>
+  <strong>전송 전 시각을 포함한 새 추정값 (실험)</strong>
+  <div class="rev3-original" aria-label="전송 전 기준 중간점 추정 평균">
+    <span>Keydown <strong id="rev3-transaction-down">—</strong></span>
+    <span>Keyup <strong id="rev3-transaction-up">—</strong></span>
+  </div>
+  <p class="muted small" id="rev3-transaction-details">새 측정부터 비교할 수 있습니다.</p>
+  <p class="muted small">새 기준점은 OUT 전송 시작 전과 IN 응답 완료 후의 중간입니다. 기존 값보다 OUT 전송 소요시간의 절반만큼 커집니다. 절댓값·고정 보정은 적용하지 않으며, 음수가 남을 수 있습니다. 실제 접점 시각으로 검증된 값은 아닙니다.</p>
+  <details><summary>회차별 기존·새 추정값 비교</summary>
+    <div class="overflow"><table><thead><tr><th>회차</th><th>기존 Keydown</th><th>기존 Keyup</th><th>새 Keydown</th><th>새 Keyup</th><th>비고</th></tr></thead><tbody id="rev3-timing-rows"></tbody></table></div>
+  </details>
 </div>
 <div id="graph" class="graph" aria-label="회차별 누름 및 뗌 지연시간 막대 그래프"></div>
 <div class="legend"><span><b class="down"></b> Keydown</span><span><b class="up"></b> Keyup</span></div>
