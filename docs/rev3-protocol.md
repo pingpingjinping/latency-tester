@@ -73,13 +73,30 @@ and retry flag without changing existing column positions.
 ## Safety and scope
 
 The optional VERSION-only ordering comparison registers `transferIn` before
-`transferOut` in the prearmed method. It does not expose this ordering for
-`contact_once`. IN and OUT completion times are captured independently. Either
+`transferOut` in the prearmed method. IN and OUT completion times are captured independently. Either
 completion order is valid; signed IN-minus-OUT times are preserved and total time
 ends at the later completion. An error/timeout closes the prearmed session without
 retrying OUT while IN is pending. A/B pairs alternate AB and BA; statistics compare
 only complete successful pairs without retries. There is no new per-request ID in
 the firmware, and a faster VERSION exchange does not establish contact timing.
+
+A separate opt-in **contact ordering comparison** exposes the same prearmed
+ordering through `contactOncePrearmed(hold)` using the existing command 2 and
+unchanged 64-byte packet. Hold is validated before queuing IN. The normal
+measurement path continues using sequential `contactOnce`. Input listeners are
+registered before either ordering. Both modes use the selected hold, target,
+interval, count and warmup; each count applies per mode and pairs alternate AB/BA.
+An input or USB failure stops the run and closes the session; stop prevents the
+next actuation and closes the session after the in-flight operation settles.
+
+This contact diagnostic displays raw IN-completion-relative results, not midpoint
+estimates. Keyup subtracts only the requested hold. Successful non-retried complete
+pairs contribute to mode summaries; failed/warmup/partial/retried rows remain
+exportable in a separate contact-order CSV. The export retains host IN submission,
+OUT start/end, IN end, raw event/handler timestamps, per-edge IN/OUT-relative
+results and errors. It does not change the normal measurement CSV. Negative
+results are preserved. These are separate actuations, not two measurements of
+the same contact; no new firmware request ID or physical reference is available.
 
 The optional endpoint descriptor read uses only inbound standard GET_DESCRIPTOR
 (request 6, configuration descriptor type 2, recipient device). It reads the

@@ -4,9 +4,10 @@ import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 import { rev3EventMidpoint } from "./input-timing.mjs";
 import { runVersionDiagnostics, runVersionComparison, versionStats, versionComparisonStats, versionCsv } from "./rev3-diagnostics.mjs";
 import { readRev3Descriptors } from "./usb-descriptors.mjs";
+import { runContactComparison, contactComparisonStats, contactComparisonCsv } from "./contact-order.mjs";
 
 const get = id => document.getElementById(id);
-const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], versionRecords: [], transportRunning: false, versionComparison: false, descriptors: null };
+const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], versionRecords: [], transportRunning: false, versionComparison: false, descriptors: null, contactRecords: [], contactSettings: null, contactRunning: false };
 const fmt = value => Number.isFinite(value) ? value.toFixed(2) + " ms" : "—";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -23,6 +24,7 @@ function env() {
   get("rev3-transport-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
   get("rev3-descriptor-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
   get("rev3-order-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
+  get("rev3-contact-start").disabled = state.running || !navigator.usb || !window.isSecureContext;
 }
 
 async function connectRev1() {
@@ -93,14 +95,15 @@ function collectInput(settings, signal) {
   };
 }
 
-async function measureOnce(device, revision, settings, signal) {
+async function measureOnce(device, revision, settings, signal, transferOrder = "sequential") {
   if (signal.aborted) throw new DOMException("중단됨", "AbortError");
   const input = collectInput(settings, signal);
   try {
     if (revision === "rev3") {
       // The vendor's Rev3 site timestamps AFTER the 64-byte IN reply.
       // Unlike Rev1, it does not base the result on transferOut completion.
-      const reply = await device.contactOnce(settings.hold);
+      const reply = await (transferOrder === "prearmed"
+        ? device.contactOncePrearmed(settings.hold) : device.contactOnce(settings.hold));
       await input.result;
       if (signal.aborted) throw new DOMException("중단됨", "AbortError");
       const t = input.times();
@@ -110,6 +113,10 @@ async function measureOnce(device, revision, settings, signal) {
       // The original Rev3 site's displayed values (IN basis) remain unchanged.
       return {
         ...official,
+        transferOrder: reply.transferOrder || "sequential",
+        inSubmittedAt: reply.inSubmittedAt,
+        replyCommand: reply.command,
+        replyValue: reply.value,
         downFromOut: outBased.down,
         upFromOut: outBased.up,
         usbReplyWait: reply.receivedAt - reply.sentAt,
@@ -252,8 +259,9 @@ function renderEventTiming(measured) {
 function setRunning(yes) {
   state.running = yes;
   get("start").disabled = yes;
-  get("stop").hidden = !yes || !state.abort || state.transportRunning;
+  get("stop").hidden = !yes || !state.abort || state.transportRunning || state.contactRunning;
   get("rev3-transport-stop").disabled = !yes || !state.transportRunning;
+  get("rev3-contact-stop").disabled = !yes || !state.contactRunning;
   for (const input of get("form").querySelectorAll("input")) input.disabled = yes;
   syncType();
   env();
@@ -383,6 +391,77 @@ async function run(event) {
   }
 }
 
+function renderContactComparison() {
+  const s = contactComparisonStats(state.contactRecords);
+  const describe = (name, result) => result.down
+    ? name + " · IN 기준 Keydown " + fmt(result.down.avg) + " / Keyup " + fmt(result.up.avg) +
+      " · IN−OUT 완료 " + fmt(result.reply.avg) + " · 양쪽 완료까지 " + fmt(result.total.avg)
+    : name + " · 비교 데이터를 기다리는 중입니다.";
+  get("rev3-contact-sequential").textContent = describe("기존 순서", s.sequential);
+  get("rev3-contact-prearmed").textContent = describe("수신 먼저", s.prearmed);
+  get("rev3-contact-difference").textContent = "완료된 동일 쌍 " + s.count + "개 · IN 기준 차이 (수신 먼저−기존) Keydown " +
+    fmt(s.difference.down?.avg) + " / Keyup " + fmt(s.difference.up?.avg) +
+    " · 재전송 " + s.retried + "회 · 실패 " + s.failed + "회";
+  get("rev3-contact-download").disabled = !state.contactRecords.length;
+  const rows = get("rev3-contact-rows");
+  rows.replaceChildren();
+  for (const r of state.contactRecords) {
+    const row = rows.insertRow();
+    for (const value of [r.phase === "warmup" ? "예열" : r.pairIndex,
+      r.mode === "prearmed" ? "수신 먼저" : "기존", fmt(r.down), fmt(r.up),
+      fmt(r.usbReceivedAt - r.usbSentAt),
+      r.error ? "실패: " + r.error : r.outRetried ? "OUT 재전송 · 비교 제외" : r.usbReceivedAt < r.usbSentAt ? "IN 먼저 완료" : "성공"]) {
+      row.insertCell().textContent = String(value);
+    }
+  }
+}
+
+async function runContactDiagnostic() {
+  if (state.running) return;
+  const controller = new AbortController();
+  state.abort = controller;
+  state.contactRunning = true;
+  setRunning(true);
+  get("rev3-contact-results").hidden = false;
+  get("rev3-contact-results").scrollIntoView?.({ behavior: "smooth", block: "start" });
+  const progress = get("rev3-contact-progress");
+  let device;
+  try {
+    const settings = validateSettings({
+      type: document.querySelector("input[name=type]:checked").value,
+      target: get("target").value, hold: get("hold").value, interval: get("interval").value,
+      count: get("count").value, warmup: get("warmup").value
+    });
+    state.contactRecords = [];
+    state.contactSettings = settings;
+    renderContactComparison();
+    progress.textContent = "Rev3 연결 중…";
+    device = await connectRev3();
+    const result = await runContactComparison(
+      mode => measureOnce(device, "rev3", settings, controller.signal, mode), {
+        ...settings, signal: controller.signal,
+        onProgress: p => {
+          progress.textContent = (p.warming ? "예열 " : "측정 ") + p.index + "/" + p.total +
+            " · " + (p.mode === "prearmed" ? "수신 먼저" : "기존 순서");
+        },
+        onRecord: row => { state.contactRecords.push(row); renderContactComparison(); }
+      });
+    const failed = result.records.find(r => r.error);
+    const measured = result.records.filter(r => r.phase === "measure").length;
+    progress.textContent = result.aborted ? "접점 비교 중단 · " + measured + "회 기록"
+      : failed ? "접점 비교 실패 · " + failed.error
+      : "접점 순서 비교 완료 · 각 " + settings.count + "회";
+    if (failed || result.aborted) await device.close();
+  } catch (error) {
+    progress.textContent = "접점 비교 실패 · " + (error.message || String(error));
+    if (device) await device.close();
+  } finally {
+    state.abort = null;
+    state.contactRunning = false;
+    setRunning(false);
+  }
+}
+
 function renderVersionDiagnostics() {
   const s = versionStats(state.versionRecords);
   get("rev3-transport-summary").hidden = state.versionComparison;
@@ -506,6 +585,17 @@ for (const [id, connect, status] of [["connect1", connectRev1, "status1"], ["con
 }
 get("rev3-transport-start").addEventListener("click", () => runTransportDiagnostic(false));
 get("rev3-order-start").addEventListener("click", () => runTransportDiagnostic(true));
+get("rev3-contact-start").addEventListener("click", runContactDiagnostic);
+get("rev3-contact-stop").addEventListener("click", () => state.abort?.abort());
+get("rev3-contact-download").addEventListener("click", () => {
+  if (!state.contactRecords.length) return;
+  const blob = new Blob([contactComparisonCsv(state.contactRecords, state.contactSettings)], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "rakka-rev3-contact-order-" + new Date().toISOString().slice(0, 10) + ".csv";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+});
 get("rev3-transport-stop").addEventListener("click", () => state.abort?.abort());
 get("rev3-transport-download").addEventListener("click", () => {
   if (!state.versionRecords.length) return;

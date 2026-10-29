@@ -15,6 +15,7 @@ jobs:
       - run: node --check input-timing.mjs
       - run: node --check rev3-protocol.mjs
       - run: node --check rev3-diagnostics.mjs
+      - run: node --check contact-order.mjs
       - run: node --check usb-descriptors.mjs
       - run: node --check keyboard.mjs
       - run: node --check server.mjs

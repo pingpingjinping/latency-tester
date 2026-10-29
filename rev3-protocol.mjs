@@ -121,10 +121,10 @@ export class Rev3Session {
   version() {
     return this.exchange(rev3Packet(REV3_COMMANDS.VERSION), REV3_COMMANDS.VERSION);
   }
-  // Diagnostic only. Never accepts a command/hold argument, so this path cannot
-  // actuate a contact. Each completion is timestamped in its own callback: IN
-  // may finish before OUT, which must not be hidden by awaiting OUT first.
-  async versionPrearmed() {
+  // Only the named VERSION/contact methods expose this ordering. Validate the
+  // packet before queuing IN; capture each completion in its own callback.
+  async #exchangePrearmed(command, holdTime = 0) {
+    const packet = rev3Packet(command, holdTime);
     if (!this.opened) throw new Error("Rev3 연결이 해제됐습니다.");
     let timer, inSubmittedAt, startedAt, sentAt, receivedAt;
     try {
@@ -132,12 +132,12 @@ export class Rev3Session {
       const incoming = this.device.transferIn(this.info.inEndpoint, REV3.packetSize).then(response => {
         receivedAt = performance.now();
         if (response.status !== "ok") throw new Error("Rev3 수신 실패: " + response.status);
-        return parseRev3Response(response.data, REV3_COMMANDS.VERSION);
+        return parseRev3Response(response.data, command);
       });
       // Handle rejection even if transferOut throws synchronously below.
       incoming.catch(() => {});
       startedAt = performance.now();
-      const outgoing = this.device.transferOut(this.info.outEndpoint, rev3Packet(REV3_COMMANDS.VERSION)).then(output => {
+      const outgoing = this.device.transferOut(this.info.outEndpoint, packet).then(output => {
         sentAt = performance.now();
         if (output.status !== "ok") throw new Error("Rev3 전송 실패: " + output.status);
       });
@@ -155,8 +155,14 @@ export class Rev3Session {
       throw error;
     } finally { clearTimeout(timer); }
   }
+  versionPrearmed() {
+    return this.#exchangePrearmed(REV3_COMMANDS.VERSION);
+  }
   contactOnce(holdTime) {
     return this.exchange(rev3Packet(REV3_COMMANDS.CONTACT_ONCE, holdTime), REV3_COMMANDS.CONTACT_ONCE);
+  }
+  contactOncePrearmed(holdTime) {
+    return this.#exchangePrearmed(REV3_COMMANDS.CONTACT_ONCE, holdTime);
   }
   async close() {
     this.closed = true;
