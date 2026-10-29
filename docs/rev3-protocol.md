@@ -52,6 +52,24 @@ keyupLatency   = keyupEventAt   - finishAt - holdTimeMs
 
 The user-supplied vendor JS initializes by issuing `get_version`, tests 5 warmup repetitions initially (fewer after repeats), and averages successful samples. The local independent implementation preserves the timing origin, default 5 warmups, and excludes timeout samples from the reported averages.
 
+## Experimental timing comparison
+
+The local implementation also records `startedAt = performance.now()` immediately
+before OUT submission. `sentAt` remains the post-OUT time and `receivedAt` remains
+the post-IN time. These are host JavaScript timestamps, not device-side contact
+timestamps. Existing raw and OUT-completion midpoint results are unchanged.
+
+The additional signed estimate is `keydownAt - (startedAt + receivedAt) / 2`;
+keyup also subtracts the requested hold time. This raises each estimate by half
+that sample's OUT duration relative to the existing midpoint. It neither removes
+IN-completion jitter nor proves the actual contact time. No absolute value,
+clamping, fixed offset, new USB commands, or firmware changes are introduced.
+
+If an OUT stalls and is retried, `outRetried` is true. All timestamps and original
+results remain available, but the new estimate is excluded because the captured
+interval includes recovery and another OUT attempt. CSV appends the timing fields
+and retry flag without changing existing column positions.
+
 ## Safety and scope
 
 This protocol has actual physical output: contact_once electrically actuates the attached switch leads for the duration specified. Ensure wires connect only to the intended keyboard/mouse switch contacts, never power rails or unknown pads. The program limits hold duration to 1..200ms and implements no DFU, firmware updates, USB reset, or serial-number retrieval. Only the device owner should initiate measurement.

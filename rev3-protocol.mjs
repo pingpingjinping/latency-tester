@@ -83,8 +83,11 @@ export class Rev3Session {
     if (!(bytes instanceof Uint8Array) || bytes.length !== REV3.packetSize) {
       throw new Error("Rev3 패킷 크기가 잘못됐습니다.");
     }
+    const startedAt = performance.now();
+    let outRetried = false;
     let output = await this.device.transferOut(this.info.outEndpoint, bytes);
     if (output.status === "stall") {
+      outRetried = true;
       await this.device.clearHalt("out", this.info.outEndpoint);
       output = await this.device.transferOut(this.info.outEndpoint, bytes);
     }
@@ -101,7 +104,7 @@ export class Rev3Session {
       ]);
       if (response.status !== "ok") throw new Error("Rev3 수신 실패: " + response.status);
       const receivedAt = performance.now();
-      return { ...parseRev3Response(response.data, expectedCommand), sentAt, receivedAt };
+      return { ...parseRev3Response(response.data, expectedCommand), startedAt, sentAt, receivedAt, outRetried };
     } catch (error) {
       // A timed-out WebUSB transferIn cannot be cancelled by AbortSignal.
       // Close the device to attempt cancellation and require reconnect.

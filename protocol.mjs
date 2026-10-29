@@ -61,8 +61,24 @@ export function rev3Midpoint(record) {
   };
 }
 
+// Includes OUT submission -> IN completion. Keep signed estimates: folding or
+// clamping them would conceal reference-point errors. Retried OUTs are excluded
+// because their interval also contains stall recovery and another attempt.
+export function rev3TransactionMidpoint(record) {
+  if (record.outRetried || !Number.isFinite(record.down) ||
+      !Number.isFinite(record.up) || !Number.isFinite(record.usbReplyWait) ||
+      !Number.isFinite(record.usbTransactionTime) || record.usbReplyWait < 0 ||
+      record.usbTransactionTime < record.usbReplyWait) {
+    return { down: NaN, up: NaN };
+  }
+  return {
+    down: record.down + record.usbTransactionTime / 2,
+    up: record.up + record.usbTransactionTime / 2
+  };
+}
+
 export function csv(records) {
-  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms,rev3_midpoint_keydown_est_ms,rev3_midpoint_keyup_est_ms"];
+  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms,rev3_midpoint_keydown_est_ms,rev3_midpoint_keyup_est_ms,rev3_usb_out_duration_ms,rev3_usb_transaction_ms,rev3_transaction_midpoint_keydown_est_ms,rev3_transaction_midpoint_keyup_est_ms,rev3_out_retried,rev3_out_start_at_ms,rev3_out_end_at_ms,rev3_in_end_at_ms,rev3_keydown_at_ms,rev3_keyup_at_ms,rev3_hold_ms"];
   for (const r of records) {
     lines.push([
       r.index,
@@ -73,7 +89,13 @@ export function csv(records) {
       Number.isFinite(r.upFromOut) ? r.upFromOut.toFixed(3) : "",
       Number.isFinite(r.usbReplyWait) ? r.usbReplyWait.toFixed(3) : "",
       Number.isFinite(rev3Midpoint(r).down) ? rev3Midpoint(r).down.toFixed(3) : "",
-      Number.isFinite(rev3Midpoint(r).up) ? rev3Midpoint(r).up.toFixed(3) : ""
+      Number.isFinite(rev3Midpoint(r).up) ? rev3Midpoint(r).up.toFixed(3) : "",
+      ...[r.usbOutDuration, r.usbTransactionTime,
+        rev3TransactionMidpoint(r).down, rev3TransactionMidpoint(r).up]
+        .map(v => Number.isFinite(v) ? v.toFixed(3) : ""),
+      typeof r.outRetried === "boolean" ? String(r.outRetried) : "",
+      ...[r.usbStartedAt, r.usbSentAt, r.usbReceivedAt, r.downAt, r.upAt, r.holdTime]
+        .map(v => Number.isFinite(v) ? v.toFixed(3) : "")
     ].join(","));
   }
   return lines.join("\r\n") + "\r\n";

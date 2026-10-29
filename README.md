@@ -115,3 +115,28 @@ Rev3 결과 화면에서 큰 평균·최소·최대·P95와 회차별 결과는 
 - `rev3_out_keydown_ms`, `rev3_out_keyup_ms`, `rev3_usb_reply_wait_ms`도 그대로 유지
 
 중간점 추정은 실제 지연시간의 확정 보정이 아니며, 특히 Keyup은 보정 후에도 음수가 남을 수 있습니다.
+
+## Rev3 전송 전 시각을 포함한 비교 실험
+
+기존 큰 측정값과 원본 IN 기준값은 그대로 유지하고, `Rev3 기준점 비교`에 새 추정 평균과 회차별 비교표를 추가했습니다.
+
+- `T0`: `transferOut` 호출 직전
+- `T1`: `transferOut` 완료 후 (기존 OUT 기준)
+- `T2`: `transferIn` 완료 후 (원본 IN 기준)
+- 기존 추정: `keydownAt - (T1 + T2) / 2`
+- 새 추정: `keydownAt - (T0 + T2) / 2`
+- Keyup은 두 식 모두 `keyupAt`을 사용하고 설정한 유지시간을 차감합니다.
+
+새 추정은 기존 추정보다 **해당 회차 OUT 전송 소요시간 `(T1 - T0)`의 절반**만큼 큽니다. OUT 전송 구간까지 포함했을 때 음수 발생과 값의 분포가 어떻게 달라지는지 비교하는 실험입니다. 고정 보정값이나 절댓값을 적용하지 않으며 음수를 그대로 보존합니다. 실제 접점 시각의 정확성이나 음수 해소는 보장하지 않습니다. IN 완료 시각의 흔들림도 여전히 영향을 줍니다.
+
+OUT이 stall로 재전송된 회차는 복구 대기가 섞이므로 새 추정 평균 및 음수 횟수 비교에서 제외하며, 비교표와 CSV에 표시합니다. 기존 추정값은 계속 보존합니다. 새 추정 평균과 음수 횟수 비교는 새 추정이 유효한 동일 회차만 사용합니다.
+
+기존 CSV 9개 컬럼의 순서와 의미는 유지하며 다음 컬럼을 뒤에 추가했습니다.
+
+- `rev3_usb_out_duration_ms`, `rev3_usb_transaction_ms`: `T1-T0`, `T2-T0` (재전송 시 복구 구간도 포함)
+- `rev3_transaction_midpoint_keydown_est_ms`, `rev3_transaction_midpoint_keyup_est_ms`: 새 추정값, 재전송 시 빈 칸
+- `rev3_out_retried`: OUT 재전송 여부
+- `rev3_out_start_at_ms`, `rev3_out_end_at_ms`, `rev3_in_end_at_ms`: `T0`, `T1`, `T2`
+- `rev3_keydown_at_ms`, `rev3_keyup_at_ms`, `rev3_hold_ms`: 입력 시각 및 유지시간
+
+시각은 페이지의 `performance.now()` 기준 밀리초이며 날짜·벽시계 시간이 아닙니다. 기존 CSV에는 `T0`가 없으므로 이전 파일로 새 추정값을 복원할 수 없습니다. Rev1의 추가 컬럼은 빈 칸입니다. PTG는 별도 HID 장치에서 누름·뗌 명령을 각각 보내므로, 이번 실험은 PTG의 측정 구조 전체를 이식한 것이 아닙니다.
