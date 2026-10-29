@@ -1,6 +1,7 @@
 import { IDS, validateSettings, rev1Packet, calculate, stats, csv, rev3Midpoint, rev3TransactionMidpoint } from "./protocol.mjs";
 import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
+import { rev3EventMidpoint } from "./input-timing.mjs";
 
 const get = id => document.getElementById(id);
 const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [] };
@@ -43,7 +44,7 @@ async function connectRev3() {
 }
 
 function collectInput(settings, signal) {
-  let downAt, upAt;
+  let downAt, upAt, downEventAt, upEventAt;
   let resolveEvent, rejectEvent;
   const result = new Promise((resolve, reject) => {
     resolveEvent = resolve;
@@ -58,11 +59,15 @@ function collectInput(settings, signal) {
     ? typeof e.key === "string" && e.key.toLowerCase() === settings.target
     : e.button === 0;
   const onDown = e => {
-    if (matches(e) && !e.repeat && downAt === undefined) downAt = performance.now();
+    if (matches(e) && !e.repeat && downAt === undefined) {
+      downAt = performance.now();
+      downEventAt = e.timeStamp;
+    }
   };
   const onUp = e => {
     if (matches(e) && downAt !== undefined && upAt === undefined) {
       upAt = performance.now();
+      upEventAt = e.timeStamp;
       resolveEvent();
     }
   };
@@ -73,7 +78,7 @@ function collectInput(settings, signal) {
   const timer = setTimeout(() => rejectEvent(new Error("입력 이벤트 시간 초과")), settings.hold + 1000);
   return {
     result,
-    times: () => ({ downAt, upAt }),
+    times: () => ({ downAt, upAt, downEventAt, upEventAt }),
     cleanup() {
       clearTimeout(timer);
       document.removeEventListener(downType, onDown, true);
@@ -111,6 +116,8 @@ async function measureOnce(device, revision, settings, signal) {
         usbReceivedAt: reply.receivedAt,
         downAt: t.downAt,
         upAt: t.upAt,
+        downEventAt: t.downEventAt,
+        upEventAt: t.upEventAt,
         holdTime: settings.hold
       };
     }
@@ -149,6 +156,7 @@ function render() {
   const measured = state.records.filter(r => Number.isFinite(r.usbReplyWait));
   diagnostic.hidden = state.lastRevision !== "rev3";
   if (state.lastRevision === "rev3") {
+    renderEventTiming(measured);
     const timingRows = get("rev3-timing-rows");
     timingRows.replaceChildren();
     const comparable = measured.filter(r => Number.isFinite(rev3TransactionMidpoint(r).down));
@@ -210,6 +218,29 @@ function render() {
       plot.append(bar);
     }
     graph.append(plot);
+  }
+}
+
+function renderEventTiming(measured) {
+  const valid = measured.filter(r => rev3EventMidpoint(r).valid);
+  const mean = key => stats(valid.map(r => rev3EventMidpoint(r)[key]));
+  const down = mean("down"), up = mean("up");
+  const downDelay = mean("downDelay"), upDelay = mean("upDelay");
+  get("rev3-event-down").textContent = down ? fmt(down.avg) : "—";
+  get("rev3-event-up").textContent = up ? fmt(up.avg) : "—";
+  get("rev3-event-details").textContent = valid.length
+    ? "이벤트 시각 유효 " + valid.length + "/" + measured.length + "회 · 처리 대기 평균 Keydown " + fmt(downDelay.avg) +
+      " / Keyup " + fmt(upDelay.avg) + " · 최대 " + fmt(downDelay.max) + " / " + fmt(upDelay.max)
+    : "유효한 이벤트 시각을 기다리는 중입니다. 사용할 수 없는 시각은 비교에서 제외합니다.";
+  const rows = get("rev3-event-rows");
+  rows.replaceChildren();
+  for (const r of state.records) {
+    const old = rev3Midpoint(r), event = rev3EventMidpoint(r);
+    const row = rows.insertRow();
+    for (const value of [r.index, fmt(old.down), fmt(old.up), fmt(event.down), fmt(event.up),
+      fmt(event.downDelay), fmt(event.upDelay), r.error ? "측정 실패" : event.valid ? "" : "이벤트 시각 비교 제외"]) {
+      row.insertCell().textContent = String(value);
+    }
   }
 }
 

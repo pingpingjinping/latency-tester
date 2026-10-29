@@ -70,6 +70,17 @@
   <details><summary>회차별 기존·새 추정값 비교</summary>
     <div class="overflow"><table><thead><tr><th>회차</th><th>기존 Keydown</th><th>기존 Keyup</th><th>새 Keydown</th><th>새 Keyup</th><th>비고</th></tr></thead><tbody id="rev3-timing-rows"></tbody></table></div>
   </details>
+  <hr>
+  <strong>입력 이벤트 시각 비교 (실험)</strong>
+  <div class="rev3-original" aria-label="이벤트 시각 기준 추정 평균">
+    <span>Keydown <strong id="rev3-event-down">—</strong></span>
+    <span>Keyup <strong id="rev3-event-up">—</strong></span>
+  </div>
+  <p class="muted small" id="rev3-event-details">새 측정부터 이벤트 처리 대기를 비교할 수 있습니다.</p>
+  <p class="muted small">기존 중간점을 유지하고 입력에 event.timeStamp를 사용한 비교값입니다. 이벤트 시각부터 처리 함수 실행까지의 대기를 별도로 기록합니다. 브라우저가 제공하는 시각이며 실제 접점 시각으로 검증된 값은 아닙니다. 음수는 그대로 보존합니다.</p>
+  <details><summary>회차별 이벤트 시각·처리 대기 비교</summary>
+    <div class="overflow"><table><thead><tr><th>회차</th><th>기존 Keydown</th><th>기존 Keyup</th><th>이벤트 Keydown</th><th>이벤트 Keyup</th><th>누름 처리 대기</th><th>뗌 처리 대기</th><th>비고</th></tr></thead><tbody id="rev3-event-rows"></tbody></table></div>
+  </details>
 </div>
 <div id="graph" class="graph" aria-label="회차별 누름 및 뗌 지연시간 막대 그래프"></div>
 <div class="legend"><span><b class="down"></b> Keydown</span><span><b class="up"></b> Keyup</span></div>

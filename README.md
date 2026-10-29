@@ -140,3 +140,29 @@ OUT이 stall로 재전송된 회차는 복구 대기가 섞이므로 새 추정 
 - `rev3_keydown_at_ms`, `rev3_keyup_at_ms`, `rev3_hold_ms`: 입력 시각 및 유지시간
 
 시각은 페이지의 `performance.now()` 기준 밀리초이며 날짜·벽시계 시간이 아닙니다. 기존 CSV에는 `T0`가 없으므로 이전 파일로 새 추정값을 복원할 수 없습니다. Rev1의 추가 컬럼은 빈 칸입니다. PTG는 별도 HID 장치에서 누름·뗌 명령을 각각 보내므로, 이번 실험은 PTG의 측정 구조 전체를 이식한 것이 아닙니다.
+
+## 입력 이벤트 시각과 처리 대기 비교
+
+`입력 이벤트 시각 비교`는 기존 OUT 완료~IN 완료 중간점을 유지하고, 입력 시각만 `event.timeStamp`로 바꾸어 나란히 보여줍니다. 기존 큰 결과·원본값·전송 전 기준 비교는 유지합니다.
+
+```text
+누름 처리 대기 = keydown 처리 함수의 performance.now() - keydown.timeStamp
+뗌 처리 대기   = keyup 처리 함수의 performance.now() - keyup.timeStamp
+이벤트 기준 Keydown = keydown.timeStamp - (T1 + T2) / 2
+이벤트 기준 Keyup   = keyup.timeStamp - 유지시간 - (T1 + T2) / 2
+```
+
+처리 대기 평균·최대와 유효 회차 수, 회차별 기존/이벤트 기준 비교를 표시합니다. 숫자 축소를 정확도 개선으로 단정하지 않습니다. 이벤트 시각은 브라우저가 제공한 입력 시각이며 실제 전기 접점 시각이 아닙니다. USB 기준점의 미확정 문제도 남아 있습니다.
+
+누름과 뗌 모두 같은 `performance.timeOrigin`을 쓰는 유효한 시각이어야 비교에 포함합니다. 누락·0·비수치·처리 시각보다 미래·순서가 뒤집힌 시각은 제외합니다. epoch 시각을 추측해서 변환하거나 처리 시각으로 대체하지 않습니다. 유효하지 않은 경우도 측정 원본과 제공된 이벤트 시각은 보존합니다. 음수·큰 처리 대기값에 절댓값이나 잘라내기를 적용하지 않습니다.
+
+기존 CSV 20개 컬럼 뒤에 다음 7개를 추가합니다. Rev1은 빈 칸입니다.
+
+- `rev3_keydown_event_at_ms`, `rev3_keyup_event_at_ms`: 이벤트 시각 원본
+- `rev3_keydown_handler_delay_ms`, `rev3_keyup_handler_delay_ms`: 유효 회차의 처리 대기
+- `rev3_event_timestamps_valid`: 이벤트 기준 비교에 사용 가능한지 여부
+- `rev3_event_midpoint_keydown_est_ms`, `rev3_event_midpoint_keyup_est_ms`: 기존 중간점을 사용한 이벤트 시각 기준 추정값
+
+기존 CSV에는 이벤트 시각이 없으므로 새 측정이 필요합니다. 비교 시 유지시간·예열·간격·테스터 포트·브라우저를 동일하게 유지하세요.
+
+참고: [Chrome Event.timeStamp 설명](https://developer.chrome.com/blog/high-res-timestamps), [DOM Event.timeStamp 정의](https://dom.spec.whatwg.org/#dom-event-timestamp).

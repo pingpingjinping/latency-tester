@@ -1,3 +1,5 @@
+import { rev3EventMidpoint } from "./input-timing.mjs";
+
 export const IDS = Object.freeze({
   rev1: Object.freeze({ vendorId: 0x5249, productId: 0x4c54 })
 });
@@ -78,8 +80,9 @@ export function rev3TransactionMidpoint(record) {
 }
 
 export function csv(records) {
-  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms,rev3_midpoint_keydown_est_ms,rev3_midpoint_keyup_est_ms,rev3_usb_out_duration_ms,rev3_usb_transaction_ms,rev3_transaction_midpoint_keydown_est_ms,rev3_transaction_midpoint_keyup_est_ms,rev3_out_retried,rev3_out_start_at_ms,rev3_out_end_at_ms,rev3_in_end_at_ms,rev3_keydown_at_ms,rev3_keyup_at_ms,rev3_hold_ms"];
+  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,rev3_out_keydown_ms,rev3_out_keyup_ms,rev3_usb_reply_wait_ms,rev3_midpoint_keydown_est_ms,rev3_midpoint_keyup_est_ms,rev3_usb_out_duration_ms,rev3_usb_transaction_ms,rev3_transaction_midpoint_keydown_est_ms,rev3_transaction_midpoint_keyup_est_ms,rev3_out_retried,rev3_out_start_at_ms,rev3_out_end_at_ms,rev3_in_end_at_ms,rev3_keydown_at_ms,rev3_keyup_at_ms,rev3_hold_ms,rev3_keydown_event_at_ms,rev3_keyup_event_at_ms,rev3_keydown_handler_delay_ms,rev3_keyup_handler_delay_ms,rev3_event_timestamps_valid,rev3_event_midpoint_keydown_est_ms,rev3_event_midpoint_keyup_est_ms"];
   for (const r of records) {
+    const event = rev3EventMidpoint(r);
     lines.push([
       r.index,
       Number.isFinite(r.down) ? r.down.toFixed(3) : "",
@@ -95,7 +98,11 @@ export function csv(records) {
         .map(v => Number.isFinite(v) ? v.toFixed(3) : ""),
       typeof r.outRetried === "boolean" ? String(r.outRetried) : "",
       ...[r.usbStartedAt, r.usbSentAt, r.usbReceivedAt, r.downAt, r.upAt, r.holdTime]
-        .map(v => Number.isFinite(v) ? v.toFixed(3) : "")
+        .map(v => Number.isFinite(v) ? v.toFixed(3) : ""),
+      ...[r.downEventAt, r.upEventAt, event.downDelay, event.upDelay]
+        .map(v => Number.isFinite(v) ? v.toFixed(3) : ""),
+      Number.isFinite(r.usbReplyWait) ? String(event.valid) : "",
+      ...[event.down, event.up].map(v => Number.isFinite(v) ? v.toFixed(3) : "")
     ].join(","));
   }
   return lines.join("\r\n") + "\r\n";
