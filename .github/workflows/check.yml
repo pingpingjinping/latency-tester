@@ -12,6 +12,7 @@ jobs:
           node-version: "22"
       - run: node --check app.js
       - run: node --check protocol.mjs
+      - run: node --check measurement.mjs
       - run: node --check input-timing.mjs
       - run: node --check rev3-protocol.mjs
       - run: node --check rev3-diagnostics.mjs

@@ -18,9 +18,7 @@
 <p id="status1" class="muted" role="status">연결되지 않음</p>
 <hr>
 <div class="device"><div><strong>Rev3</strong> <small>WebUSB · 5249:4C65</small></div><button id="connect3">Rev3 연결</button></div>
-<p id="status3" class="muted" role="status">연결되지 않음 · 새로 복원한 명령 규격으로 측정 지원</p>
-<div class="rev3-tools"><button id="rev3-transport-start" type="button" class="secondary">버전 통신 검사 (50회)</button><button id="rev3-order-start" type="button" class="secondary">수신 순서 비교 (각 50회)</button><button id="rev3-descriptor-start" type="button" class="secondary">USB 주기 설정 읽기</button></div>
-<p class="muted small">접점을 누르지 않고 버전 조회만 반복해 USB 응답 대기를 확인합니다. 예열 5회 후 50회 검사합니다.</p>
+<p id="status3" class="muted" role="status">연결되지 않음</p>
 <p class="muted small">Rev3는 원본 RAKKA 2023년 웹 코드에서 확인한 64바이트 프로토콜을 사용합니다. 펌웨어 업데이트 명령은 없습니다.</p>
 <hr>
 <div class="device"><div><strong>PTG Studio</strong> <small>Latency Tester · HAR 기반 사이트 백업</small></div><a class="button-link" href="./ptg/">PTG Studio 열기 →</a></div>
@@ -46,70 +44,13 @@
 </div>
 <p class="muted small">측정선을 대상 키/클릭 스위치의 두 접점에 연결하세요. 측정 중에는 브라우저 탭에 포커스를 유지해야 합니다.</p>
 <div class="actions"><button id="start" type="submit">측정 시작</button><button id="stop" type="button" class="secondary" hidden>측정 중단</button></div>
-<div class="actions"><button id="rev3-contact-start" type="button" class="secondary">Rev3 접점 순서 비교 (실험)</button></div>
-<p class="muted small">접점 비교는 위의 키·유지시간·간격을 사용하며, 측정 횟수와 예열 횟수를 각 방식에 적용합니다. 기존 순서와 수신 먼저를 번갈아 측정합니다.</p>
 </form>
 </section>
 </div>
-<section id="rev3-descriptor-results" class="panel results" hidden>
-<div class="result-top"><div><h2>Rev3 USB 엔드포인트 설정</h2><p id="rev3-descriptor-progress" class="muted" role="status">아직 읽지 않았습니다.</p></div><button id="rev3-descriptor-download" type="button" class="secondary" disabled>설정 JSON 저장</button></div>
-<p class="muted small">장치가 등록한 bInterval 원본값을 읽습니다. 설정은 변경하지 않습니다. 실제 주기(ms)는 연결 속도와 호스트에 따라 달라지므로 이 화면에서는 확정하지 않습니다.</p>
-<div class="overflow"><table><thead><tr><th>방향</th><th>주소</th><th>종류</th><th>최대 패킷</th><th>bInterval 원본</th></tr></thead><tbody id="rev3-descriptor-rows"></tbody></table></div>
-</section>
-<section id="rev3-transport-results" class="panel results" hidden>
-<div class="result-top"><div><h2 id="rev3-transport-title">Rev3 버전 조회 통신 검사</h2><p id="rev3-transport-progress" class="muted" role="status">아직 검사하지 않았습니다.</p></div></div>
-<div class="actions"><button id="rev3-transport-stop" type="button" class="secondary" disabled>통신 검사 중단</button><button id="rev3-transport-download" type="button" class="secondary" disabled>통신 CSV 저장</button></div>
-<p id="rev3-transport-summary">통신 검사 결과를 기다리는 중입니다.</p>
-<div id="rev3-order-summary" hidden><p id="rev3-order-sequential"></p><p id="rev3-order-prearmed"></p><p id="rev3-order-difference"></p></div>
-<p id="rev3-transport-count" class="muted small"></p>
-<p class="muted small">이 값은 키보드 레이턴시가 아닙니다. 접점 측정의 USB 응답 대기와 비교하세요. OUT 재전송 회차는 평균에서 제외하며 CSV에는 보존합니다.</p>
-<p class="muted small">순서 비교는 기존·수신 먼저를 각 5회 예열한 뒤 각 50회 검사합니다. 같은 쌍의 두 방식이 모두 성공한 경우만 평균을 비교합니다. IN−OUT 완료 차이는 수신이 먼저 끝나면 음수이며 그대로 기록합니다. 양쪽 완료 시간은 OUT 시작부터 IN·OUT이 모두 완료될 때까지입니다.</p>
-<p class="muted small">버전 응답에는 회차 식별자가 없습니다. IN이 먼저 완료되면 이전 응답인지 이번 요청의 응답인지 시각만으로 구분할 수 없으므로, 시간 감소를 실제 응답속도 개선으로 확정하지 마세요.</p>
-<details><summary>회차별 통신 시간</summary><div class="overflow"><table><thead><tr><th>회차</th><th>방식</th><th>OUT 소요</th><th>IN−OUT 완료</th><th>양쪽 완료까지</th><th>상태</th></tr></thead><tbody id="rev3-transport-rows"></tbody></table></div></details>
-</section>
-<section id="rev3-contact-results" class="panel results" hidden>
-<div class="result-top"><div><h2>Rev3 접점 수신 순서 비교 (실험)</h2><p id="rev3-contact-progress" class="muted" role="status">아직 비교하지 않았습니다.</p></div></div>
-<div class="actions"><button id="rev3-contact-stop" type="button" class="secondary" disabled>접점 비교 중단</button><button id="rev3-contact-download" type="button" class="secondary" disabled>접점 비교 CSV 저장</button></div>
-<p id="rev3-contact-sequential"></p><p id="rev3-contact-prearmed"></p><p id="rev3-contact-difference" class="muted small"></p>
-<p class="muted small">IN 응답 완료 기준 원본 값입니다. Keyup에는 유지시간만 뺍니다. 중간점·절댓값·고정 보정을 적용하지 않으며 음수도 표시합니다. 양쪽 방식이 성공하고 OUT 재전송이 없는 동일 쌍만 평균에 포함합니다. 각 쌍은 별도의 접점 작동 2회입니다.</p>
-<p class="muted small">실제 접점 시각으로 검증된 기준점이 아닙니다. 응답에 회차 식별자가 없어 이번 요청의 응답인지 시각만으로 확정할 수 없습니다. 오류가 나면 검사를 멈추며, 부분 결과와 입력·USB 원본 시각을 CSV로 저장할 수 있습니다.</p>
-<details><summary>회차별 접점 비교</summary><div class="overflow"><table><thead><tr><th>쌍</th><th>방식</th><th>IN 기준 Keydown</th><th>IN 기준 Keyup</th><th>IN−OUT 완료</th><th>상태</th></tr></thead><tbody id="rev3-contact-rows"></tbody></table></div></details>
-</section>
 <section class="panel results">
 <div class="result-top"><div><h2>측정 결과</h2><p class="muted" id="progress">아직 측정하지 않았습니다.</p></div><button id="download" class="secondary" disabled>CSV 저장</button></div>
 <div class="stats"><article><div id="down-average-label">평균 Keydown</div><strong id="down-average">—</strong><small id="down-detail">키 누름 지연</small></article><article><div id="up-average-label">평균 Keyup</div><strong id="up-average">—</strong><small id="up-detail">키 뗌 지연</small></article></div>
-<div id="rev3-comparison" class="notice" hidden>
-  <strong>Rev3 기준점 비교</strong>
-  <p class="muted small">원본 IN 응답 완료 기준 (보정 전)</p>
-  <div class="rev3-original" aria-label="원본 Rev3 레이턴시">
-    <span>Keydown <strong id="rev3-original-down">—</strong></span>
-    <span>Keyup <strong id="rev3-original-up">—</strong></span>
-  </div>
-  <p class="muted small" id="rev3-compare-details">측정 데이터를 기다리는 중입니다.</p>
-  <p class="muted small">위 큰 측정값은 매 회차의 USB OUT→IN 응답 시간 절반을 더한 <strong>중간점 추정값</strong>입니다. 접점 작동 시점으로 검증된 보정은 아닙니다. CSV에는 원본과 추정값을 모두 저장합니다.</p>
-  <hr>
-  <strong>전송 전 시각을 포함한 새 추정값 (실험)</strong>
-  <div class="rev3-original" aria-label="전송 전 기준 중간점 추정 평균">
-    <span>Keydown <strong id="rev3-transaction-down">—</strong></span>
-    <span>Keyup <strong id="rev3-transaction-up">—</strong></span>
-  </div>
-  <p class="muted small" id="rev3-transaction-details">새 측정부터 비교할 수 있습니다.</p>
-  <p class="muted small">새 기준점은 OUT 전송 시작 전과 IN 응답 완료 후의 중간입니다. 기존 값보다 OUT 전송 소요시간의 절반만큼 커집니다. 절댓값·고정 보정은 적용하지 않으며, 음수가 남을 수 있습니다. 실제 접점 시각으로 검증된 값은 아닙니다.</p>
-  <details><summary>회차별 기존·새 추정값 비교</summary>
-    <div class="overflow"><table><thead><tr><th>회차</th><th>기존 Keydown</th><th>기존 Keyup</th><th>새 Keydown</th><th>새 Keyup</th><th>비고</th></tr></thead><tbody id="rev3-timing-rows"></tbody></table></div>
-  </details>
-  <hr>
-  <strong>입력 이벤트 시각 비교 (실험)</strong>
-  <div class="rev3-original" aria-label="이벤트 시각 기준 추정 평균">
-    <span>Keydown <strong id="rev3-event-down">—</strong></span>
-    <span>Keyup <strong id="rev3-event-up">—</strong></span>
-  </div>
-  <p class="muted small" id="rev3-event-details">새 측정부터 이벤트 처리 대기를 비교할 수 있습니다.</p>
-  <p class="muted small">기존 중간점을 유지하고 입력에 event.timeStamp를 사용한 비교값입니다. 이벤트 시각부터 처리 함수 실행까지의 대기를 별도로 기록합니다. 브라우저가 제공하는 시각이며 실제 접점 시각으로 검증된 값은 아닙니다. 음수는 그대로 보존합니다.</p>
-  <details><summary>회차별 이벤트 시각·처리 대기 비교</summary>
-    <div class="overflow"><table><thead><tr><th>회차</th><th>기존 Keydown</th><th>기존 Keyup</th><th>이벤트 Keydown</th><th>이벤트 Keyup</th><th>누름 처리 대기</th><th>뗌 처리 대기</th><th>비고</th></tr></thead><tbody id="rev3-event-rows"></tbody></table></div>
-  </details>
-</div>
+<p id="measurement-basis" class="notice small" hidden>Rev3는 수신을 먼저 요청하고 OUT 요청부터 입력 처리까지의 시간을 표시합니다. Keyup은 유지시간도 뺍니다. 테스터 작동 지연이 포함된 미보정 값이며, 키보드만의 지연으로 확정할 수 없습니다.</p>
 <div id="graph" class="graph" aria-label="회차별 누름 및 뗌 지연시간 막대 그래프"></div>
 <div class="legend"><span><b class="down"></b> Keydown</span><span><b class="up"></b> Keyup</span></div>
 <div class="overflow"><table><thead><tr><th>회차</th><th>Keydown</th><th>Keyup</th><th>상태</th></tr></thead><tbody id="rows"><tr><td colspan="4">아직 결과가 없습니다.</td></tr></tbody></table></div>

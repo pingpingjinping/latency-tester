@@ -150,6 +150,8 @@ export class Rev3Session {
     } catch (error) {
       // Close on any failure, including failed OUT with an outstanding IN.
       // Do not retry the OUT or leave a read queued for the next measurement.
+      error.usbTiming = { command, inSubmittedAt, startedAt, sentAt, receivedAt,
+        transferOrder: "prearmed", outRetried: false };
       this.closed = true;
       try { await Promise.race([this.device.close(), new Promise(resolve => setTimeout(resolve, 700))]); } catch {}
       throw error;

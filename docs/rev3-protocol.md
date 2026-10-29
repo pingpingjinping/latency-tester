@@ -1,6 +1,6 @@
 # RAKKA Rev3 WebUSB protocol (recovered from user-supplied website)
 
-Status: **verified by reading the vendor website's 2023 production JavaScript, not yet independently hardware-validated.**
+Status: **recovered from the vendor website's 2023 JavaScript, with user hardware observations archived on 2026-10-29. Actual contact timing is not independently validated.**
 
 Reference site: https://latency.rakka.dev/ . Bundles captured by the device owner: `0454688439ab25a701a1.js` and `41742477d8ae3d9c3654.js`, including full browser HAR (2026-10-17). The raw HAR and original bundles are intentionally **not** committed to this public repository.
 
@@ -43,21 +43,21 @@ The original site sends each request via `usb.transferOut(outEndpoint, 64-byte p
 
 Rev3 starts observing keydown/mousedown and keyup/mouseup **before** requesting `contact_once(hold)`, then waits for the OUT/IN exchange and both events.
 
-Unlike the Rev1 reference (which timestamps just after HID feature report OUT), Rev3 saves `finishAt = performance.now()` **after completion of the reply IN transfer**, and computes:
+Unlike the Rev1 reference (which timestamps just after HID feature report OUT), the original Rev3 site saves `finishAt = performance.now()` **after completion of the reply IN transfer**, and computes:
 
 ```text
 keydownLatency = keydownEventAt - finishAt
 keyupLatency   = keyupEventAt   - finishAt - holdTimeMs
 ```
 
-The user-supplied vendor JS initializes by issuing `get_version`, tests 5 warmup repetitions initially (fewer after repeats), and averages successful samples. The local independent implementation preserves the timing origin, default 5 warmups, and excludes timeout samples from the reported averages.
+The user-supplied vendor JS initializes by issuing `get_version`, tests 5 warmup repetitions initially (fewer after repeats), and averages successful samples. The local implementation retains the IN origin as raw CSV fields. Its current display uses the request origin described below, keeps default 5 warmups and excludes failures from averages.
 
-## Experimental timing comparison
+## Archived timing comparison
 
-The local implementation also records `startedAt = performance.now()` immediately
+The archived midpoint experiment also records `startedAt = performance.now()` immediately
 before OUT submission. `sentAt` remains the post-OUT time and `receivedAt` remains
 the post-IN time. These are host JavaScript timestamps, not device-side contact
-timestamps. Existing raw and OUT-completion midpoint results are unchanged.
+timestamps. These older midpoint results are retained in archived test captures, not the default display.
 
 The additional signed estimate is `keydownAt - (startedAt + receivedAt) / 2`;
 keyup also subtracts the requested hold time. This raises each estimate by half
@@ -70,9 +70,25 @@ results remain available, but the new estimate is excluded because the captured
 interval includes recovery and another OUT attempt. CSV appends the timing fields
 and retry flag without changing existing column positions.
 
-## Safety and scope
+## Current basic measurement
 
-The optional VERSION-only ordering comparison registers `transferIn` before
+The normal Rev3 path registers IN before submitting the original contact OUT.
+`measurement.mjs` reports `keydownHandlerAt - outStartedAt` and
+`keyupHandlerAt - outStartedAt - requestedHold`. These are request-relative elapsed
+values including the unknown tester actuation delay D, not calibrated keyboard-only
+latency. D is not implicitly zero. No midpoint, absolute value or guessed D is
+applied. IN-relative results remain separate fields in the new basic CSV.
+
+The UI contains only basic measurement, graph and CSV. Experimental diagnostics
+are documented in [the investigation record](rev3-investigation-2026-10-29.md).
+The old 20/27-column experimental CSV schema must not be interpreted as the new
+request-relative export. On input/USB failure the current run records available
+partial timestamps and stops further Rev3 commands, closing the session.
+
+## Archived diagnostics and safety
+
+
+The archived VERSION-only ordering comparison registers `transferIn` before
 `transferOut` in the prearmed method. IN and OUT completion times are captured independently. Either
 completion order is valid; signed IN-minus-OUT times are preserved and total time
 ends at the later completion. An error/timeout closes the prearmed session without
@@ -80,10 +96,10 @@ retrying OUT while IN is pending. A/B pairs alternate AB and BA; statistics comp
 only complete successful pairs without retries. There is no new per-request ID in
 the firmware, and a faster VERSION exchange does not establish contact timing.
 
-A separate opt-in **contact ordering comparison** exposes the same prearmed
+An archived **contact ordering comparison** exposes the same prearmed
 ordering through `contactOncePrearmed(hold)` using the existing command 2 and
-unchanged 64-byte packet. Hold is validated before queuing IN. The normal
-measurement path continues using sequential `contactOnce`. Input listeners are
+unchanged 64-byte packet. Hold is validated before queuing IN. The current normal
+measurement path uses `contactOncePrearmed`; this comparison code is retained for replay and tests, without UI buttons. Input listeners are
 registered before either ordering. Both modes use the selected hold, target,
 interval, count and warmup; each count applies per mode and pairs alternate AB/BA.
 An input or USB failure stops the run and closes the session; stop prevents the
@@ -103,8 +119,8 @@ The optional endpoint descriptor read uses only inbound standard GET_DESCRIPTOR
 configuration headers by descriptor index until the active configuration value
 matches, then retrieves and validates that full descriptor. It preserves raw
 bytes and bInterval fields without inferring negotiated speed or milliseconds.
-It issues no control OUT, contact command or serial-string query. The UI excludes
-other operations during the read. A timeout closes the session to avoid reusing
+It issues no control OUT, contact command or serial-string query. The original diagnostic UI excluded
+other operations during the read; that UI has been removed. A timeout closes the session to avoid reusing
 an outstanding control request; failed reports retain received raw data.
 
 The optional version-timing diagnostic uses only the existing `get_version` (0)
@@ -113,7 +129,7 @@ records 50 replies at 50ms spacing, and never sends `contact_once`. Timing data
 are saved separately from keyboard results. Retried exchanges remain in the CSV
 but not the aggregate. Stop prevents further requests after the in-flight exchange
 has completed or reached the existing timeout. An exchange error stops the run.
-The UI blocks concurrent measurement, diagnostics and connection work.
+The former diagnostic UI blocked concurrent measurement, diagnostics and connection work.
 
 This protocol has actual physical output: contact_once electrically actuates the attached switch leads for the duration specified. Ensure wires connect only to the intended keyboard/mouse switch contacts, never power rails or unknown pads. The program limits hold duration to 1..200ms and implements no DFU, firmware updates, USB reset, or serial-number retrieval. Only the device owner should initiate measurement.
 

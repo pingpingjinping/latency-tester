@@ -46,16 +46,8 @@ input[type=number],input[type=text]{width:100%;border:1px solid #55627d;border-r
 #keyboard-help{margin:12px 2px 0}
 @media(max-width:640px){.keyboard-dialog-content{padding:13px 10px}.keyboard-heading{flex-wrap:wrap;gap:7px}.keyboard-heading h2{font-size:16px}.keyboard-layout{min-width:530px;padding:7px;gap:4px}.keyboard-key{height:33px}.keyboard-row{gap:4px}}
 
-/* Rev3: keep raw website readings visible but secondary to the per-run estimate. */
-.rev3-original{display:flex;flex-wrap:wrap;column-gap:18px;row-gap:6px;margin:4px 0 10px;color:var(--muted);font-size:13px}
-.rev3-original strong{font-size:14px;color:var(--text);font-variant-numeric:tabular-nums}
-#rev3-comparison>.muted.small{margin:6px 0}
-#rev3-comparison details{margin-top:12px}
-#rev3-comparison summary{cursor:pointer;font-size:13px}
-#rev3-comparison table{min-width:660px;font-size:13px}
-#rev3-transport-results{margin:18px 0}
-#rev3-transport-results table{min-width:520px;font-size:13px}
-#rev3-transport-results summary{cursor:pointer;font-size:13px}
-#rev3-descriptor-results{margin:18px 0}
-#rev3-descriptor-results table{min-width:500px;font-size:13px}
-.rev3-tools{display:flex;flex-wrap:wrap;gap:8px}
+/* Signed results share one zero line; table values are never clamped. */
+.graph{position:relative;align-items:stretch;padding:0 3px;background:linear-gradient(to bottom,transparent calc(var(--zero,100%) - 1px),#62718f calc(var(--zero,100%) - 1px),#62718f var(--zero,100%),transparent var(--zero,100%))}
+.plot{position:relative;display:block;align-items:initial}
+.bar{position:absolute;width:46%;min-width:0;border-radius:3px}
+.bar.down{left:0}.bar.up{right:0}
