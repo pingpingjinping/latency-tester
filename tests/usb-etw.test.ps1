@@ -79,4 +79,6 @@ try {
     }
     Assert ($script:decodeCalls.Count -eq 2) 'Expected both export outcomes to be checked.'
     Write-Host 'PowerShell parse, isolated session recovery and mocked export checks passed.'
+    # The failure mock sets LASTEXITCODE deliberately; do not leak it to CI.
+    $global:LASTEXITCODE = 0
 } finally { Remove-Item -LiteralPath $root -Recurse -Force }
