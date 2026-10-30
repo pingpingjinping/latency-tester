@@ -72,18 +72,30 @@ and retry flag without changing existing column positions.
 
 ## Current basic measurement
 
-The normal Rev3 path registers IN before submitting the original contact OUT.
-`measurement.mjs` reports `keydownHandlerAt - outStartedAt` and
-`keyupHandlerAt - outStartedAt - requestedHold`. These are request-relative elapsed
-values including the unknown tester actuation delay D, not calibrated keyboard-only
-latency. D is not implicitly zero. No midpoint, absolute value or guessed D is
-applied. IN-relative results remain separate fields in the new basic CSV.
+The normal Rev3 path registers IN before the original contact OUT. The primary
+result is now an empirical scale-matching estimate: `keydownHandlerAt - inEndAt +
+calibration.downOffset` and `keyupHandlerAt - inEndAt - requestedHold +
+calibration.upOffset`. Default offsets are +7.334ms/down and +8.014ms/up, matching the user-reported
+Rev1 FUN60 Ultra 20ms/50-run means (0.58/0.46ms, 2026-10-17) against the
+2026-10-30 Rev3 raw IN means (-6.754/-7.554ms). This matches separate sessions
+empirically; it does not measure the physical tester delay.
 
-The UI contains only basic measurement, graph and CSV. Experimental diagnostics
-are documented in [the investigation record](rev3-investigation-2026-10-29.md).
-The old 20/27-column experimental CSV schema must not be interpreted as the new
-request-relative export. On input/USB failure the current run records available
-partial timestamps and stops further Rev3 commands, closing the session.
+`calibration.mjs` can fit separate offsets from another tester's mean values on
+the same keyboard: reference mean minus the current successful non-retried Rev3
+IN-relative mean. Applying a profile recalculates the current data from raw IN
+values; it does not compound previous offsets. A fresh run snapshots the profile
+before each contact and locks settings throughout. Coefficients and reference
+metadata persist locally and are exported alongside request-relative/IN-relative
+raw values and original timestamps. Negative corrected values remain signed.
+
+The new export appends 11 calibration/request fields after the earlier 29 columns.
+`timing_basis=in_offset` identifies the new display, `out_request` identifies older
+uncorrected captures, and `out_complete` remains the Rev1 basis. On input/USB
+failure the current run records partial timestamps, stops further Rev3 commands
+and closes the session. All historical source files retain their original bytes.
+
+See [the investigation](rev3-investigation-2026-10-29.md) and
+[the empirical calibration record](rev3-reference-calibration-2026-10-30.md).
 
 ## Archived diagnostics and safety
 

@@ -1,0 +1,80 @@
+{
+  "schema": "rakka-user-reported-reference-v1",
+  "keyboard": "FUN60 Ultra",
+  "tester": "RAKKA Rev1",
+  "source": {
+    "kind": "prior_user_message",
+    "date": "2026-10-17",
+    "message_timestamp_utc": "2026-10-17T12:56:07Z",
+    "raw_csv_available_in_this_workspace": false,
+    "note": "Earlier user-reported Rev1 measurements recovered from prior conversation; not a new hardware run.",
+    "message_timestamps_utc": [
+      "2026-10-17T12:56:07Z",
+      "2026-10-17T12:59:26Z"
+    ]
+  },
+  "measurements": [
+    {
+      "hold_ms": 20,
+      "count": 50,
+      "keydown_average_ms": 0.58,
+      "keyup_average_ms": 0.46,
+      "source_message_timestamp_utc": "2026-10-17T12:56:07Z",
+      "keydown_min_ms": 0.4,
+      "keydown_max_ms": 0.9,
+      "keyup_min_ms": -0.2,
+      "keyup_max_ms": 1.1
+    },
+    {
+      "hold_ms": 30,
+      "count": 50,
+      "keydown_average_ms": 0.59,
+      "keyup_average_ms": 0.74,
+      "source_message_timestamp_utc": "2026-10-17T12:59:26Z"
+    },
+    {
+      "hold_ms": 50,
+      "count": 50,
+      "keydown_average_ms": 0.57,
+      "keyup_average_ms": 0.74,
+      "source_message_timestamp_utc": "2026-10-17T12:59:26Z"
+    }
+  ],
+  "selected_hold_ms": 20,
+  "rev3_baseline": {
+    "file": "fun60-wired.csv",
+    "date": "2026-10-30",
+    "count": 50,
+    "hold_ms": 20,
+    "transfer_order": "prearmed",
+    "in_keydown_average_ms": -6.754,
+    "in_keyup_average_ms": -7.554
+  },
+  "offsets": {
+    "keydown_ms": 7.334,
+    "keyup_ms": 8.014
+  },
+  "interpretation": "Empirical matching across separate sessions; not a measured physical actuation delay.",
+  "gmk70_cross_check": {
+    "keyboard": "GMK70",
+    "connection": "wired",
+    "date": "2026-10-17",
+    "source": {
+      "kind": "prior_user_messages",
+      "rev3_timestamp_utc": "2026-10-17T12:09:51Z",
+      "comparison_timestamp_utc": "2026-10-17T12:20:50Z",
+      "raw_reference_csv_available_in_this_workspace": false
+    },
+    "reference_testers": [
+      "RAKKA Rev1",
+      "PTG"
+    ],
+    "reported_reference_approx_ms": 10,
+    "reference_precision": "approximate; no separate exact Keydown/Keyup averages recovered",
+    "rev3_in_keydown_average_ms": 2.55,
+    "rev3_in_keyup_average_ms": 2.32,
+    "corrected_keydown_average_ms": 9.884,
+    "corrected_keyup_average_ms": 10.334,
+    "interpretation": "Historical approximate scale check. Exact reference keyup is unknown. Not pooled into the default FUN60 fit; does not prove the newer GMK session matches."
+  }
+}

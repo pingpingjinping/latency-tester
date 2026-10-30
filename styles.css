@@ -51,3 +51,5 @@ input[type=number],input[type=text]{width:100%;border:1px solid #55627d;border-r
 .plot{position:relative;display:block;align-items:initial}
 .bar{position:absolute;width:46%;min-width:0;border-radius:3px}
 .bar.down{left:0}.bar.up{right:0}
+.calibration{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}.calibration summary{cursor:pointer;font-size:13px;font-weight:700}.calibration .fields{margin-top:12px}.calibration .actions{flex-wrap:wrap;margin-top:12px}.calibration .small{display:block}
+.calibration button{white-space:normal;max-width:100%}

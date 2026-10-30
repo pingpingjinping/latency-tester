@@ -14,7 +14,7 @@ RAKKA Rev1·Rev3 비공식 오프라인 측정 도구와 사용자 HAR로 추출
 ## 기능
 
 - **RAKKA Rev1**: WebHID (5249:4C54), 키보드/마우스 Keydown·Keyup 측정, 예열, 그래프, CSV.
-- **RAKKA Rev3**: WebUSB (5249:4C65), 공식 사이트 코드에서 확인한 64바이트 `contact_once` 명령, 키보드/마우스 Keydown·Keyup, 예열·그래프·CSV. 수신 먼저 방식과 요청 기준 미보정 값. 실제 접점 시각에 대한 절대 정확도는 미검증.
+- **RAKKA Rev3**: WebUSB (5249:4C65), 공식 사이트 코드에서 확인한 64바이트 `contact_once` 명령, 키보드/마우스 Keydown·Keyup, 예열·그래프·CSV. 수신 먼저 방식과 기준 장비 맞춤 보정 추정값. 실제 접점 시각에 대한 절대 정확도는 미검증.
 - **PTG Studio**: `https://pl.ptgstudio.com/`의 2026-10-15 사용자 HAR 캡처 응답 12개(HTML, JS, CSS, PNG)를 `ptg/` 아래에 보관.
 - **Rev3**는 메인 RAKKA 화면에 다시 추가했습니다. 버전 명령(0)으로 연결을 확인하고 접점 명령(2)으로 측정합니다. 기본 접점 측정은 IN 수신을 먼저 등록한 뒤 OUT을 보냅니다.
 
@@ -37,6 +37,7 @@ Rev1 Feature report ID=0, 8바이트, 첫째 바이트 유지시간(1~200ms), �
 node --check app.js
 node --check protocol.mjs
 node --check measurement.mjs
+node --check calibration.mjs
 node --check rev3-protocol.mjs
 node --check rev3-diagnostics.mjs
 node --check usb-descriptors.mjs
@@ -90,26 +91,47 @@ PTG 화면 위의 별도 전체 너비 전환 바를 제거하고, 기존 흰색
 상세 규격은 [docs/rev3-protocol.md](docs/rev3-protocol.md)에 기재했습니다. 원본 HAR과 JS는 사용자 로컬에서만 보존하며 이 공개 저장소에는 넣지 않았습니다.
 
 
-## 현재 Rev3 기본 측정
+## 현재 Rev3 기본 측정과 기준 장비 맞춤 보정
 
-화면은 연결·측정 설정·Keydown/Keyup 평균·최소/P95/최대·그래프·CSV만 표시합니다. 중간점 추정값과 버전/접점 비교 버튼은 기본 화면에서 제거했습니다.
+화면은 연결·설정·Keydown/Keyup 평균·최소/P95/최대·그래프·CSV를 표시합니다. 여러 중간점 비교 패널은 유지하지 않고 **Rev3 보정 · 다른 테스터에 맞춤** 설정을 접힌 영역으로 제공합니다.
 
-Rev3는 IN 수신을 먼저 등록한 뒤 기존 64바이트 `contact_once` 요청을 보냅니다. 기본 결과는 다음 **요청 기준 경과시간**입니다.
+Rev3는 IN 수신을 먼저 등록하고 기존 64바이트 `contact_once` 요청을 보냅니다. 현재 기본 결과는 다음 **경험적 보정 추정값**입니다.
 
 ```text
-Keydown = 입력 처리 시각 − OUT 요청 시각
-Keyup   = 입력 처리 시각 − OUT 요청 시각 − 요청 유지시간
+Keydown = 입력 처리 시각 − IN 완료 시각 + 누름 보정값
+Keyup   = 입력 처리 시각 − IN 완료 시각 − 요청 유지시간 + 뗌 보정값
 ```
 
-이 값에는 테스터가 접점을 작동시키기까지의 지연 D가 포함됩니다. D는 아직 미확정이며, 0으로 측정된 값이 아닙니다. 키보드만의 지연을 계산하려면 독립적으로 확인한 D를 빼야 합니다. 지금은 임의의 D·USB 응답 대기 절반·절댓값을 적용하지 않습니다. 음수는 표와 그래프에 그대로 표시합니다. Rev1 계산식은 기존 OUT 완료 기준입니다.
+기본 보정값은 **누름 +7.334ms / 뗌 +8.014ms**입니다. 사용자가 2026-10-17 올린 FUN60 Ultra Rev1·유지 20ms·50회 평균 **0.58ms / 0.46ms**와, 2026-10-30 Rev3 원본 IN 평균 −6.754ms / −7.554ms의 차이로 정했습니다. 이번 Rev3 CSV에 적용하면 평균 0.58ms / 0.46ms가 됩니다. 당시 GMK70 Rev3 원본 2.55ms에도 누름 보정을 적용하면 9.884ms로, 사용자가 보고한 Rev1·PTG 약 10ms와 대략 맞습니다. GMK의 대략값은 기본 보정 계산에 섞지 않았습니다. 서로 다른 실행을 경험적으로 맞춘 값이며 테스터 자체 지연을 실측한 값은 아닙니다. 음수는 절댓값이나 0으로 접지 않고 표·그래프·CSV에 그대로 남깁니다. Rev1 계산식은 기존 OUT 완료 기준입니다.
 
-Rev3에서 USB 오류·입력 시간 초과·입력 순서 오류가 나면 해당 행을 기록하고 세션을 닫아 추가 접점 명령을 멈춥니다. 성공한 큰 값은 잘라내거나 실패 처리하지 않습니다. 실패 시에도 받은 입력과 USB 시각은 CSV에 남으며 평균에는 포함하지 않습니다. 다시 측정하면 새 연결을 엽니다.
+### 다른 테스터 값으로 맞추기
+
+1. 같은 키보드·키·연결 방식·유지시간·PC 조건에서 다른 Rev 또는 기준 테스터의 Keydown/Keyup 평균을 구합니다.
+2. Rev3로 같은 키보드를 측정한 뒤 **Rev3 보정 · 다른 테스터에 맞춤**을 펼칩니다.
+3. 기준 장비의 평균과 이름을 입력하고 **이번 측정 평균을 기준값에 맞추기**를 누릅니다.
+4. `각 보정값 = 기준 장비 평균 − 이번 Rev3 원본 IN 기준 평균`으로 누름·뗌을 각각 계산합니다. 현재 결과도 원본에서 다시 계산하며 중복 보정하지 않습니다.
+5. 같은 키보드를 새로 측정해 일치가 반복되는지 확인한 뒤 다른 키보드에 적용합니다. 보정에 쓴 데이터의 평균이 목표와 맞는 것은 계산 결과이며 독립 검증은 아닙니다.
+
+보정값을 직접 입력해 **보정값 적용**으로 바꾸거나 **이전 Rev1 기준으로 복원**할 수 있습니다. 적용값과 기준 장비 정보는 이 브라우저의 localStorage에 저장합니다. 측정 중에는 변경을 막고 각 회차에 당시 설정을 복사합니다. 원본 입력/USB 시각은 바뀌지 않습니다.
+
+Rev3에서 USB 오류·입력 시간 초과·입력 순서 오류가 나면 해당 행을 기록하고 세션을 닫아 추가 접점 명령을 멈춥니다. 성공한 큰 값은 잘라내거나 실패 처리하지 않습니다. 실패 시에도 받은 입력과 USB 시각은 CSV에 남으며 평균에는 포함하지 않습니다.
 
 ### 기본 CSV
 
-새 CSV의 `keydown_ms`, `keyup_ms`는 화면 값이며 `revision`과 `timing_basis`로 기준을 구분합니다. Rev3는 `out_request`, Rev1은 `out_complete`입니다. `transfer_order`는 Rev3에서 `prearmed`입니다.
+`keydown_ms`, `keyup_ms`는 화면의 보정 추정값이며 현재 Rev3의 `timing_basis`는 **`in_offset`**입니다. Rev1은 `out_complete`를 유지합니다. 이전 29컬럼 요청 기준 CSV의 `out_request`와 의미가 다릅니다.
 
-원본 OUT 요청/완료·IN 완료·IN 등록·입력 처리·event.timeStamp, 유지시간, IN 기준 참고값, USB 구간, 응답 명령/값, 실패 단계·오류를 별도 컬럼에 기록합니다. 실패나 누락 시각을 0으로 채우지 않습니다. 기존 20/27컬럼 실험 CSV와 새 기본 CSV는 서로 다른 스키마이며 중간점 추정 컬럼은 새 파일에 없습니다. 예전 파일의 의미를 새 기준으로 바꿔 읽지 마세요.
+기존 29컬럼 위치는 유지하고 다음 11컬럼을 추가했습니다.
+
+- 요청 기준 원본: `out_request_keydown_ms`, `out_request_keyup_ms`
+- 적용 보정값: `keydown_offset_ms`, `keyup_offset_ms`
+- 보정 출처/기준: `calibration_source`, `calibration_reference`
+- 기준 장비 평균: `calibration_reference_keydown_ms`, `calibration_reference_keyup_ms`
+- 보정에 사용한 Rev3 원본 평균: `calibration_baseline_in_keydown_ms`, `calibration_baseline_in_keyup_ms`
+- 사용 회차 수: `calibration_sample_count`
+
+IN 기준 원본 `in_keydown_ms`, `in_keyup_ms`와 USB/입력 시각도 유지합니다. `calibration_source`는 `manual`(직접 입력) 또는 `reference_fit`(기준 장비 맞춤)입니다. 기본 프로필도 `reference_fit`이고 기준 이름·평균·Rev3 원본 평균·50회 기록을 포함합니다. 실패/누락값은 0으로 채우지 않습니다. 예전 실험 CSV의 기준이나 원본값을 새 의미로 덮어 읽지 마세요.
+
+자세한 공식·재계산 결과와 제한은 [기준 장비 맞춤 보정 기록](docs/rev3-reference-calibration-2026-10-30.md)에 있습니다.
 
 ## 지금까지 한 실험과 원본 기록
 

@@ -1,5 +1,6 @@
 import { calculate } from "./protocol.mjs";
 import { eventHandlerDelay } from "./input-timing.mjs";
+import { applyRev3Calibration, validateCalibration, DEFAULT_REV3_CALIBRATION } from "./calibration.mjs";
 
 // Preserve partially received edges when a run fails. Freeze them at the
 // failure, so a later stray event cannot turn a timeout into an apparent pair.
@@ -77,21 +78,23 @@ export function rev3RequestMeasurement(reply, times, hold) {
 
 export async function measureRev3(session, settings, signal, target = document) {
   if (signal.aborted) throw new DOMException("중단됨", "AbortError");
+  // Snapshot before submitting a contact. Invalid offsets never actuate it.
+  const calibration = validateCalibration(settings.calibration || DEFAULT_REV3_CALIBRATION);
   const input = collectInput(settings, signal, target);
   let reply;
   try {
     reply = await session.contactOncePrearmed(settings.hold);
     await input.result;
     if (signal.aborted) throw new DOMException("중단됨", "AbortError");
-    return rev3RequestMeasurement(reply, input.times(), settings.hold);
+    return applyRev3Calibration(rev3RequestMeasurement(reply, input.times(), settings.hold), calibration);
   } catch (error) {
-    error.measurement = {
+    error.measurement = applyRev3Calibration({
       revision: "rev3", timingBasis: "out_request", holdTime: settings.hold,
       ...usbFields(reply || error.usbTiming), ...input.times(),
       failureStage: signal.aborted ? "aborted"
         : error.code === "INPUT_TIMEOUT" ? "input_timeout"
         : error.code === "INPUT_ORDER" ? "input_order" : reply ? "timing" : "usb"
-    };
+    }, calibration);
     throw error;
   } finally { input.cleanup(); }
 }
@@ -105,7 +108,7 @@ export function measurementCsv(records) {
     const text = String(value);
     return /[",\r\n]/.test(text) ? '"' + text.replaceAll('"', '""') + '"' : text;
   };
-  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,revision,timing_basis,transfer_order,hold_ms,out_start_at_ms,out_end_at_ms,in_end_at_ms,in_submitted_at_ms,keydown_at_ms,keyup_at_ms,keydown_event_at_ms,keyup_event_at_ms,keydown_handler_delay_ms,keyup_handler_delay_ms,in_keydown_ms,in_keyup_ms,out_duration_ms,reply_wait_ms,total_ms,command_id,reply_value,out_retried,failure_stage,phase,error"];
+  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,revision,timing_basis,transfer_order,hold_ms,out_start_at_ms,out_end_at_ms,in_end_at_ms,in_submitted_at_ms,keydown_at_ms,keyup_at_ms,keydown_event_at_ms,keyup_event_at_ms,keydown_handler_delay_ms,keyup_handler_delay_ms,in_keydown_ms,in_keyup_ms,out_duration_ms,reply_wait_ms,total_ms,command_id,reply_value,out_retried,failure_stage,phase,error,out_request_keydown_ms,out_request_keyup_ms,keydown_offset_ms,keyup_offset_ms,calibration_source,calibration_reference,calibration_reference_keydown_ms,calibration_reference_keyup_ms,calibration_baseline_in_keydown_ms,calibration_baseline_in_keyup_ms,calibration_sample_count"];
   for (const r of records) {
     lines.push([r.index, r.error ? NaN : r.down, r.error ? NaN : r.up, r.error ? "failed" : "ok",
       r.revision, r.timingBasis, r.transferOrder, r.holdTime,
@@ -115,7 +118,10 @@ export function measurementCsv(records) {
       r.downFromIn, r.upFromIn,
       r.usbSentAt - r.usbStartedAt, r.usbReceivedAt - r.usbSentAt,
       Math.max(r.usbReceivedAt, r.usbSentAt) - r.usbStartedAt,
-      r.replyCommand, r.replyValue, r.outRetried, r.failureStage, r.phase, r.error].map(cell).join(","));
+      r.replyCommand, r.replyValue, r.outRetried, r.failureStage, r.phase, r.error,
+      r.downFromRequest, r.upFromRequest, r.calibration?.downOffset, r.calibration?.upOffset,
+      r.calibration?.source, r.calibration?.referenceName, r.calibration?.referenceDown, r.calibration?.referenceUp,
+      r.calibration?.baselineDown, r.calibration?.baselineUp, r.calibration?.sampleCount].map(cell).join(","));
   }
   return lines.join("\r\n") + "\r\n";
 }

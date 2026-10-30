@@ -2,11 +2,63 @@ import { IDS, validateSettings, rev1Packet, calculate, stats } from "./protocol.
 import { keyboardRows, normalizeKeyboardTarget } from "./keyboard.mjs";
 import { connectRev3 as openRev3Session } from "./rev3-protocol.mjs";
 import { collectInput, measureRev3, measurementCsv } from "./measurement.mjs";
+import { DEFAULT_REV3_CALIBRATION, validateCalibration, applyRev3Calibration, fitReferenceCalibration } from "./calibration.mjs";
 
 const get = id => document.getElementById(id);
-const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [] };
+const state = { rev1: null, rev3: null, lastRevision: "rev1", running: false, abort: null, records: [], calibration: { ...DEFAULT_REV3_CALIBRATION } };
 const fmt = value => Number.isFinite(value) ? value.toFixed(2) + " ms" : "—";
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const calibrationKey = "rakka-rev3-calibration-v1";
+
+function loadCalibration() {
+  try {
+    const saved = globalThis.localStorage?.getItem(calibrationKey);
+    if (saved) state.calibration = validateCalibration(JSON.parse(saved));
+  } catch { state.calibration = { ...DEFAULT_REV3_CALIBRATION }; }
+  fillCalibrationFields();
+}
+
+function fillCalibrationFields() {
+  const c = state.calibration;
+  get("rev3-down-offset").value = String(c.downOffset);
+  get("rev3-up-offset").value = String(c.upOffset);
+  get("rev3-reference-name").value = c.referenceName || "";
+  get("rev3-reference-down").value = Number.isFinite(c.referenceDown) ? String(c.referenceDown) : "";
+  get("rev3-reference-up").value = Number.isFinite(c.referenceUp) ? String(c.referenceUp) : "";
+}
+
+function readCalibrationFields() {
+  const c = validateCalibration({ downOffset: get("rev3-down-offset").value, upOffset: get("rev3-up-offset").value });
+  return c.downOffset === state.calibration.downOffset && c.upOffset === state.calibration.upOffset
+    ? validateCalibration(state.calibration) : c;
+}
+
+function saveCalibration() {
+  try { globalThis.localStorage?.setItem(calibrationKey, JSON.stringify(state.calibration)); } catch {}
+}
+
+function renderCalibration() {
+  const rev3 = document.querySelector('input[name=revision]:checked').value === "rev3";
+  get("rev3-calibration").hidden = !rev3;
+  for (const id of ["rev3-down-offset", "rev3-up-offset", "rev3-reference-down", "rev3-reference-up", "rev3-reference-name"]) {
+    get(id).disabled = state.running || !rev3;
+  }
+  get("rev3-calibration-apply").disabled = state.running || !rev3;
+  get("rev3-calibration-reset").disabled = state.running || !rev3;
+  get("rev3-calibration-fit").disabled = state.running || !rev3 || state.lastRevision !== "rev3" ||
+    !state.records.some(r => !r.error && Number.isFinite(r.downFromIn) && Number.isFinite(r.upFromIn));
+  const c = state.calibration;
+  const source = c.source === "reference_fit"
+    ? "기준 장비 맞춤" + (c.referenceName ? " · " + c.referenceName : "") : "수동 보정";
+  get("rev3-calibration-status").textContent = source + " · 누름 +(" + c.downOffset.toFixed(3) +
+    ")ms / 뗌 +(" + c.upOffset.toFixed(3) + ")ms";
+}
+
+function applyCalibrationSettings(calibration) {
+  state.calibration = validateCalibration(calibration);
+  state.records = state.records.map(r => r.revision === "rev3" ? applyRev3Calibration(r, state.calibration) : r);
+  fillCalibrationFields(); saveCalibration(); render();
+}
 
 function env() {
   get("environment").textContent = !window.isSecureContext
@@ -66,9 +118,16 @@ function render() {
   const rows = get("rows"), graph = get("graph");
   rows.replaceChildren(); graph.replaceChildren();
   const rev3 = state.lastRevision === "rev3";
-  get("down-average-label").textContent = rev3 ? "평균 Keydown (요청 기준)" : "평균 Keydown";
-  get("up-average-label").textContent = rev3 ? "평균 Keyup (요청 기준)" : "평균 Keyup";
+  get("down-average-label").textContent = rev3 ? "평균 Keydown (보정 추정)" : "평균 Keydown";
+  get("up-average-label").textContent = rev3 ? "평균 Keyup (보정 추정)" : "평균 Keyup";
   get("measurement-basis").hidden = !rev3;
+  if (rev3) {
+    const c = state.calibration;
+    get("measurement-basis").textContent = "IN 기준에 누름 " + c.downOffset.toFixed(3) + "ms / 뗌 " +
+      c.upOffset.toFixed(3) + "ms를 더한 추정값입니다. " +
+      "보정은 다른 테스터와 숫자대를 맞추기 위한 값이며 실제 테스터 작동 지연을 측정한 값은 아닙니다.";
+  }
+  renderCalibration();
   const successful = state.records.filter(r => !r.error);
   const d = stats(successful.map(r => r.down)), u = stats(successful.map(r => r.up));
   get("down-average").textContent = d ? fmt(d.avg) : "—";
@@ -108,7 +167,7 @@ function setRunning(yes) {
   state.running = yes;
   get("start").disabled = yes; get("stop").hidden = !yes || !state.abort;
   for (const input of get("form").querySelectorAll("input")) input.disabled = yes;
-  syncType(); env();
+  syncType(); renderCalibration(); env();
 }
 
 function selectKeyboardKey(value) {
@@ -182,6 +241,9 @@ async function run(event) {
       warmup: get("warmup").value
     });
     if (revision === "rev3") {
+      settings.calibration = readCalibrationFields();
+      state.calibration = settings.calibration;
+      saveCalibration();
       device = await connectRev3();
     } else {
       device = state.rev1?.opened ? state.rev1 : await connectRev1();
@@ -260,6 +322,23 @@ get("keyboard-dialog").addEventListener("click", event => {
   if (event.target === get("keyboard-dialog")) get("keyboard-dialog").close();
 });
 get("stop").addEventListener("click", () => state.abort?.abort());
+get("rev3-calibration-apply").addEventListener("click", () => {
+  if (state.running || document.querySelector('input[name=revision]:checked').value !== "rev3") return;
+  try { applyCalibrationSettings(readCalibrationFields()); }
+  catch (error) { get("rev3-calibration-status").textContent = error.message; }
+});
+get("rev3-calibration-reset").addEventListener("click", () => {
+  if (state.running || document.querySelector('input[name=revision]:checked').value !== "rev3") return;
+  applyCalibrationSettings(DEFAULT_REV3_CALIBRATION);
+});
+get("rev3-calibration-fit").addEventListener("click", () => {
+  if (state.running || state.lastRevision !== "rev3" || document.querySelector('input[name=revision]:checked').value !== "rev3") return;
+  try {
+    applyCalibrationSettings(fitReferenceCalibration(state.records,
+      get("rev3-reference-down").value, get("rev3-reference-up").value, get("rev3-reference-name").value));
+  } catch (error) { get("rev3-calibration-status").textContent = error.message; }
+});
+document.querySelectorAll("input[name=revision]").forEach(radio => radio.addEventListener("change", renderCalibration));
 document.querySelectorAll("input[name=type]").forEach(radio => radio.addEventListener("change", syncType));
 get("download").addEventListener("click", () => {
   if (!state.records.length) return;
@@ -284,6 +363,7 @@ navigator.usb?.addEventListener("disconnect", event => {
     get("status3").textContent = "Rev3 연결 해제됨";
   }
 });
+loadCalibration();
 buildKeyboard();
 syncType();
 env();

@@ -19,14 +19,14 @@ const csvRows = records => {
     return Object.fromEntries(keys.map((key, i) => [key, values[i]]));
   });
 };
-test("basic Rev3 values use request time and retain independently timestamped early IN", () => {
+test("request diagnostic retains independently timestamped early IN", () => {
   const r = rev3RequestMeasurement(reply(), times(), 20);
   assert.equal(r.down, 11); assert.equal(r.up, 11);
   assert.equal(r.downFromIn, 7); assert.equal(r.upFromIn, 7);
   assert.equal(r.usbReceivedAt, 104); assert.equal(r.usbSentAt, 112);
   assert.equal(r.timingBasis, "out_request");
 });
-test("changing USB completion does not shift the new primary results or invent tester delay", () => {
+test("request diagnostic is independent of USB completion and does not invent tester delay", () => {
   const base = rev3RequestMeasurement(reply(), times(), 20);
   const changed = rev3RequestMeasurement({ ...reply(), receivedAt: 140, sentAt: 124 }, times(), 20);
   assert.equal(changed.down, base.down); assert.equal(changed.up, base.up);
@@ -54,7 +54,8 @@ test("input listeners precede the contact request and are removed after success"
     },
     contactOnce() { assert.fail("must not fall back to sequential contacts"); }
   }, settings, controller.signal, target);
-  assert.equal(contacts, 1); assert.equal(r.down, 11); assert.equal(r.up, 11);
+  assert.equal(contacts, 1); assert.ok(Math.abs(r.down - 14.334) < 1e-9); assert.ok(Math.abs(r.up - 15.014) < 1e-9);
+  assert.equal(r.downFromRequest, 11); assert.equal(r.calibration.source, "reference_fit");
   assert.equal(getEventListeners(target, "keydown").length, 0);
   assert.equal(getEventListeners(controller.signal, "abort").length, 0);
 });

@@ -42,6 +42,22 @@
 <label>측정 횟수<input id="count" type="number" min="1" max="100" value="10" required></label>
 <label>예열 횟수<input id="warmup" type="number" min="0" max="10" value="5" required></label>
 </div>
+<details id="rev3-calibration" class="calibration" hidden>
+<summary>Rev3 보정 · 다른 테스터에 맞춤</summary>
+<div class="fields">
+<label>누름 보정 <small>ms</small><input id="rev3-down-offset" type="number" min="-1000" max="1000" step="any" value="7.334"></label>
+<label>뗌 보정 <small>ms</small><input id="rev3-up-offset" type="number" min="-1000" max="1000" step="any" value="8.014"></label>
+</div>
+<div class="actions"><button id="rev3-calibration-apply" type="button" class="secondary">보정값 적용</button><button id="rev3-calibration-reset" type="button" class="secondary">이전 Rev1 기준으로 복원</button></div>
+<p id="rev3-calibration-status" class="muted small" role="status"></p>
+<p class="muted small">기본값은 이전 FUN60 Ultra Rev1·20ms·50회 평균 0.58/0.46ms에 맞췄습니다. 같은 키보드를 새로 측정한 뒤 다른 테스터의 평균을 아래에 입력하면 다시 맞출 수 있습니다.</p>
+<label class="small" for="rev3-reference-name">기준 장비·키보드 이름 (선택)</label><input id="rev3-reference-name" type="text" maxlength="80" placeholder="예: Rev1 / FUN60">
+<div class="fields">
+<label>기준 장비 Keydown <small>ms</small><input id="rev3-reference-down" type="number" min="-1000" max="1000" step="any" placeholder="평균값"></label>
+<label>기준 장비 Keyup <small>ms</small><input id="rev3-reference-up" type="number" min="-1000" max="1000" step="any" placeholder="평균값"></label>
+</div>
+<div class="actions"><button id="rev3-calibration-fit" type="button" class="secondary" disabled>이번 측정 평균을 기준값에 맞추기</button></div>
+</details>
 <p class="muted small">측정선을 대상 키/클릭 스위치의 두 접점에 연결하세요. 측정 중에는 브라우저 탭에 포커스를 유지해야 합니다.</p>
 <div class="actions"><button id="start" type="submit">측정 시작</button><button id="stop" type="button" class="secondary" hidden>측정 중단</button></div>
 </form>
@@ -50,7 +66,7 @@
 <section class="panel results">
 <div class="result-top"><div><h2>측정 결과</h2><p class="muted" id="progress">아직 측정하지 않았습니다.</p></div><button id="download" class="secondary" disabled>CSV 저장</button></div>
 <div class="stats"><article><div id="down-average-label">평균 Keydown</div><strong id="down-average">—</strong><small id="down-detail">키 누름 지연</small></article><article><div id="up-average-label">평균 Keyup</div><strong id="up-average">—</strong><small id="up-detail">키 뗌 지연</small></article></div>
-<p id="measurement-basis" class="notice small" hidden>Rev3는 수신을 먼저 요청하고 OUT 요청부터 입력 처리까지의 시간을 표시합니다. Keyup은 유지시간도 뺍니다. 테스터 작동 지연이 포함된 미보정 값이며, 키보드만의 지연으로 확정할 수 없습니다.</p>
+<p id="measurement-basis" class="notice small" hidden>Rev3는 IN 기준에 보정값을 더한 추정값입니다.</p>
 <div id="graph" class="graph" aria-label="회차별 누름 및 뗌 지연시간 막대 그래프"></div>
 <div class="legend"><span><b class="down"></b> Keydown</span><span><b class="up"></b> Keyup</span></div>
 <div class="overflow"><table><thead><tr><th>회차</th><th>Keydown</th><th>Keyup</th><th>상태</th></tr></thead><tbody id="rows"><tr><td colspan="4">아직 결과가 없습니다.</td></tr></tbody></table></div>
