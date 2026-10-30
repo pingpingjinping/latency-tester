@@ -1,0 +1,87 @@
+{
+  "schema": "rakka-rev3-usb-descriptors-v1",
+  "status": "ok",
+  "vendorId": 21065,
+  "productId": 19557,
+  "configurationValue": 1,
+  "negotiatedSpeed": "unknown",
+  "note": "bInterval 원본값입니다. 실제 주기는 연결 속도와 호스트에 따라 달라집니다.",
+  "reads": [
+    {
+      "descriptorIndex": 0,
+      "requestedLength": 9,
+      "hex": "09 02 20 00 01 01 02 80 fa"
+    },
+    {
+      "descriptorIndex": 0,
+      "requestedLength": 32,
+      "hex": "09 02 20 00 01 01 02 80 fa 09 04 00 00 02 ff 4c 54 02 07 05 81 03 40 00 08 07 05 01 03 40 00 08"
+    }
+  ],
+  "configuration": {
+    "totalLength": 32,
+    "configurationValue": 1,
+    "interfaces": [
+      {
+        "interfaceNumber": 0,
+        "alternateSetting": 0,
+        "declaredEndpointCount": 2,
+        "interfaceClass": 255,
+        "interfaceSubclass": 76,
+        "interfaceProtocol": 84,
+        "endpoints": [
+          {
+            "address": 129,
+            "endpointNumber": 1,
+            "direction": "in",
+            "transferType": "interrupt",
+            "attributes": 3,
+            "wMaxPacketSize": 64,
+            "maxPacketSize": 64,
+            "bInterval": 8
+          },
+          {
+            "address": 1,
+            "endpointNumber": 1,
+            "direction": "out",
+            "transferType": "interrupt",
+            "attributes": 3,
+            "wMaxPacketSize": 64,
+            "maxPacketSize": 64,
+            "bInterval": 8
+          }
+        ]
+      }
+    ]
+  },
+  "selectedInterface": {
+    "interfaceNumber": 0,
+    "alternateSetting": 0,
+    "declaredEndpointCount": 2,
+    "interfaceClass": 255,
+    "interfaceSubclass": 76,
+    "interfaceProtocol": 84,
+    "endpoints": [
+      {
+        "address": 129,
+        "endpointNumber": 1,
+        "direction": "in",
+        "transferType": "interrupt",
+        "attributes": 3,
+        "wMaxPacketSize": 64,
+        "maxPacketSize": 64,
+        "bInterval": 8
+      },
+      {
+        "address": 1,
+        "endpointNumber": 1,
+        "direction": "out",
+        "transferType": "interrupt",
+        "attributes": 3,
+        "wMaxPacketSize": 64,
+        "maxPacketSize": 64,
+        "bInterval": 8
+      }
+    ]
+  }
+}

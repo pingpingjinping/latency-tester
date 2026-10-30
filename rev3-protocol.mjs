@@ -121,8 +121,50 @@ export class Rev3Session {
   version() {
     return this.exchange(rev3Packet(REV3_COMMANDS.VERSION), REV3_COMMANDS.VERSION);
   }
+  // Only the named VERSION/contact methods expose this ordering. Validate the
+  // packet before queuing IN; capture each completion in its own callback.
+  async #exchangePrearmed(command, holdTime = 0) {
+    const packet = rev3Packet(command, holdTime);
+    if (!this.opened) throw new Error("Rev3 연결이 해제됐습니다.");
+    let timer, inSubmittedAt, startedAt, sentAt, receivedAt;
+    try {
+      inSubmittedAt = performance.now();
+      const incoming = this.device.transferIn(this.info.inEndpoint, REV3.packetSize).then(response => {
+        receivedAt = performance.now();
+        if (response.status !== "ok") throw new Error("Rev3 수신 실패: " + response.status);
+        return parseRev3Response(response.data, command);
+      });
+      // Handle rejection even if transferOut throws synchronously below.
+      incoming.catch(() => {});
+      startedAt = performance.now();
+      const outgoing = this.device.transferOut(this.info.outEndpoint, packet).then(output => {
+        sentAt = performance.now();
+        if (output.status !== "ok") throw new Error("Rev3 전송 실패: " + output.status);
+      });
+      const [, reply] = await Promise.race([
+        Promise.all([outgoing, incoming]),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Rev3 순서 비교 시간 초과 (2.5초)")), 2500); })
+      ]);
+      return { ...reply, inSubmittedAt, startedAt, sentAt, receivedAt,
+        outRetried: false, transferOrder: "prearmed" };
+    } catch (error) {
+      // Close on any failure, including failed OUT with an outstanding IN.
+      // Do not retry the OUT or leave a read queued for the next measurement.
+      error.usbTiming = { command, inSubmittedAt, startedAt, sentAt, receivedAt,
+        transferOrder: "prearmed", outRetried: false };
+      this.closed = true;
+      try { await Promise.race([this.device.close(), new Promise(resolve => setTimeout(resolve, 700))]); } catch {}
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+  versionPrearmed() {
+    return this.#exchangePrearmed(REV3_COMMANDS.VERSION);
+  }
   contactOnce(holdTime) {
     return this.exchange(rev3Packet(REV3_COMMANDS.CONTACT_ONCE, holdTime), REV3_COMMANDS.CONTACT_ONCE);
+  }
+  contactOncePrearmed(holdTime) {
+    return this.#exchangePrearmed(REV3_COMMANDS.CONTACT_ONCE, holdTime);
   }
   async close() {
     this.closed = true;

@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-29",
+  "files": [
+    {
+      "original_filename": "usb.csv",
+      "archived_filename": "gmk70-wired-round1.csv",
+      "bytes": 7870,
+      "sha256": "46ba1c6f6336566f2ee0f29815c8ab445ef7d60f7a98aed0b2da6d6b027aab2e"
+    },
+    {
+      "original_filename": "2.4g.csv",
+      "archived_filename": "gmk70-24g-round1.csv",
+      "bytes": 7858,
+      "sha256": "d45c42ab4dfe107de69d67ff7dd3dcc54ed1e345165cebff2ff6ec686200d7d7"
+    },
+    {
+      "original_filename": "bt.csv",
+      "archived_filename": "gmk70-bluetooth-round1.csv",
+      "bytes": 7931,
+      "sha256": "b961895c453a10b1bed4d7bb6e1cc8b53e9bed25aa0100ca0d89b74321072104"
+    },
+    {
+      "original_filename": "usb(1).csv",
+      "archived_filename": "gmk70-wired-events-round2.csv",
+      "bytes": 10269,
+      "sha256": "d67f08445e5919a6ff61d1e81277f6902e478c271b1069e94c740b4740da207c"
+    },
+    {
+      "original_filename": "2.4g(1).csv",
+      "archived_filename": "gmk70-24g-events-round2.csv",
+      "bytes": 10357,
+      "sha256": "6a0ed2776e7a4f2b2244fc40f73968673172ac278657bcfa6d0ecc7febfd603e"
+    },
+    {
+      "original_filename": "bt(1).csv",
+      "archived_filename": "gmk70-bluetooth-events-round2.csv",
+      "bytes": 10438,
+      "sha256": "ba5a1ff96d2420a07dfab507ae622419a3adc9f6f6b9db62e9fa1c809034ac0e"
+    },
+    {
+      "original_filename": "ten.csv",
+      "archived_filename": "gmk70-wired-hold10.csv",
+      "bytes": 10463,
+      "sha256": "b8db6ba9d7063030bd1ce43e95050a49e8921dad5fa18a4e4b90c3944fef5196"
+    },
+    {
+      "original_filename": "50.csv",
+      "archived_filename": "gmk70-wired-hold50.csv",
+      "bytes": 10623,
+      "sha256": "129fcf92128f17fd996a374309f615da5a44cd00caa2e98ba3248f29fdc0866c"
+    },
+    {
+      "original_filename": "hundred.csv",
+      "archived_filename": "gmk70-wired-hold100.csv",
+      "bytes": 10674,
+      "sha256": "262dbadc457f23072165f3901163eef4ad67cd4b9c70f3068098ebebc8aea191"
+    },
+    {
+      "original_filename": "rakka-rev3-version-timing-2026-10-29.csv",
+      "archived_filename": "version-sequential.csv",
+      "bytes": 4436,
+      "sha256": "5a7a5d5998e966176b1dbe6571c94a643129d3a1614f10bed49b33b52a4a7e34"
+    },
+    {
+      "original_filename": "rakka-rev3-version-order-2026-10-29.csv",
+      "archived_filename": "version-order-comparison.csv",
+      "bytes": 12548,
+      "sha256": "03be03bebd68f9b4183c85568a564de33efd90a11030f0ef33409432991885ef"
+    },
+    {
+      "original_filename": "rakka-rev3-contact-order-2026-10-29.csv",
+      "archived_filename": "contact-order-comparison.csv",
+      "bytes": 17803,
+      "sha256": "a1783a2fca634999466410af1bb53022723072b1e0e89a9c2824d07c944c98ca"
+    },
+    {
+      "original_filename": "rakka-rev3-usb-descriptors.json",
+      "archived_filename": "usb-descriptors.json",
+      "bytes": 2202,
+      "sha256": "bfa708ee5404511d2bd055e53cf14ff98748ca306e817b4f7e598ed3f5ec4786"
+    }
+  ]
+}

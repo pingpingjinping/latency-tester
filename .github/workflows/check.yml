@@ -12,9 +12,22 @@ jobs:
           node-version: "22"
       - run: node --check app.js
       - run: node --check protocol.mjs
+      - run: node --check measurement.mjs
+      - run: node --check calibration.mjs
+      - run: node --check input-timing.mjs
       - run: node --check rev3-protocol.mjs
+      - run: node --check rev3-diagnostics.mjs
+      - run: node --check contact-order.mjs
+      - run: node --check usb-descriptors.mjs
       - run: node --check keyboard.mjs
       - run: node --check server.mjs
       - run: node --check ptg/assets/index-BZEgvNeM.js
       - run: node --check ptg/assets/index-B3lzit8o.js
-      - run: node --test tests/protocol.test.mjs tests/rev3-protocol.test.mjs tests/keyboard.test.mjs tests/ptg-ui.test.mjs
+      - run: node --test tests/*.test.mjs
+  windows-trace-checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse capture script and check isolated session recovery
+        shell: powershell
+        run: ./tests/usb-etw.test.ps1

@@ -1,0 +1,2 @@
+# Local Windows diagnostic captures (never commit user ETW logs).
+/usb-traces/

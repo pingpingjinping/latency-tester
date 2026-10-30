@@ -1,0 +1,84 @@
+# Run with Windows PowerShell 5.1 or pwsh. No administrator/device access.
+$ErrorActionPreference = 'Stop'
+$scriptPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools/usb-etw.ps1'
+$tokens = $null; $errors = $null
+[Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$errors) | Out-Null
+if ($errors.Count) { throw ($errors | Out-String) }
+. $scriptPath
+
+$root = Join-Path ([IO.Path]::GetTempPath()) ('rakka-etw-check-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $root | Out-Null
+$path = Join-Path $root 'active-session.json'
+$script:calls = @(); $script:failOn = ''
+function Invoke-Logman([string[]]$Arguments, [string]$LogPath) {
+    $script:calls += ,$Arguments
+    if ($Arguments[0] -eq $script:failOn) { return 1 }
+    return 0
+}
+function Assert($Condition, [string]$Message) { if (-not $Condition) { throw $Message } }
+function Save-State($State) { $State | ConvertTo-Json | Set-Content -LiteralPath $path -Encoding utf8 }
+function Expect-Failure([scriptblock]$Body) {
+    $failed = $false
+    try { & $Body } catch { $failed = $true }
+    Assert $failed 'Expected failure was not raised.'
+}
+$script:decodeCode = 0; $script:decodeCalls = @()
+function tracerpt.exe {
+    $script:decodeCalls += ,$args
+    if ($args -contains '-rts' -and $args -contains '-summary') {
+        throw 'tracerpt rejects the combination of -rts and -summary.'
+    }
+    if ($script:decodeCode -eq 0) {
+        $xmlIndex = [Array]::IndexOf($args, '-o')
+        $summaryIndex = [Array]::IndexOf($args, '-summary')
+        '<Events />' | Set-Content -LiteralPath $args[$xmlIndex + 1] -Encoding utf8
+        'Synthetic summary' | Set-Content -LiteralPath $args[$summaryIndex + 1] -Encoding utf8
+    }
+    $global:LASTEXITCODE = $script:decodeCode
+}
+try {
+    $state = @{ session = 'unrelated-trace'; directory = $root; status = 'running' }
+    Save-State $state
+    Expect-Failure { Stop-OwnSession $state $path }
+    Assert ($script:calls.Count -eq 0) 'Invalid session name reached logman.'
+
+    $state.session = 'rakka-rev3-' + ('a' * 32)
+    Save-State $state
+    $script:failOn = 'stop'
+    Expect-Failure { Stop-OwnSession $state $path }
+    Assert ($script:calls.Count -eq 1) 'Delete was attempted after a failed stop.'
+    Assert (Test-Path -LiteralPath $path) 'Recovery state was lost on stop failure.'
+
+    $script:calls = @(); $script:failOn = 'delete'
+    Expect-Failure { Stop-OwnSession $state $path }
+    $saved = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    Assert ($saved.status -eq 'stopped') 'Stopped status was not saved for retry.'
+    Assert ($script:calls.Count -eq 2) 'Expected stop then delete.'
+
+    $script:calls = @(); $script:failOn = ''
+    Stop-OwnSession $saved $path
+    Assert ($script:calls.Count -eq 1 -and $script:calls[0][0] -eq 'delete') 'Retry tried to stop an already stopped session.'
+    Assert (-not (Test-Path -LiteralPath $path)) 'Successful cleanup retained active state.'
+    Assert ($script:calls[0][2] -eq $state.session) 'Cleanup used the wrong session name.'
+    foreach ($code in @(0, 87)) {
+        $script:decodeCode = $code
+        $exportDir = Join-Path $root "export-$code"
+        New-Item -ItemType Directory -Path $exportDir | Out-Null
+        $raw = Join-Path $exportDir 'usb_000001.etl'
+        [IO.File]::WriteAllBytes($raw, [byte[]]@(1, 2, 3, 4))
+        Export-Trace @{ directory = $exportDir }
+        Assert (Test-Path -LiteralPath "$exportDir.zip") 'Export did not create an archive.'
+        $result = Get-Content (Join-Path $exportDir 'export.json') -Raw | ConvertFrom-Json
+        Assert ($result.xmlDecoded -eq ($code -eq 0)) 'Decode failure was reported as success.'
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [IO.Compression.ZipFile]::OpenRead("$exportDir.zip")
+        try {
+            $entry = $zip.GetEntry('usb_000001.etl')
+            Assert ($null -ne $entry -and $entry.Length -eq 4) 'Original ETL was lost from the archive.'
+        } finally { $zip.Dispose() }
+    }
+    Assert ($script:decodeCalls.Count -eq 2) 'Expected both export outcomes to be checked.'
+    Write-Host 'PowerShell parse, isolated session recovery and mocked export checks passed.'
+    # The failure mock sets LASTEXITCODE deliberately; do not leak it to CI.
+    $global:LASTEXITCODE = 0
+} finally { Remove-Item -LiteralPath $root -Recurse -Force }

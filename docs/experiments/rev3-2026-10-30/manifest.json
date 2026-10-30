@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-30",
+  "files": [
+    {
+      "original_filename": "rakka-rev3-2026-10-30.csv",
+      "archived_filename": "fun60-wired.csv",
+      "bytes": 10822,
+      "sha256": "169e890402c491bb8a044982a825c0c3ce9d89153dcab7a5c31978078a0a22b3"
+    },
+    {
+      "original_filename": "rakka-rev3-2026-10-30(1).csv",
+      "archived_filename": "wired-etw.csv",
+      "bytes": 21114,
+      "sha256": "c90cb47c5d4129bbb09445922d4f62cc7b6414a5445ab2a38e4e2d37c1b30bbb"
+    }
+  ]
+}

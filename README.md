@@ -14,9 +14,9 @@ RAKKA Rev1·Rev3 비공식 오프라인 측정 도구와 사용자 HAR로 추출
 ## 기능
 
 - **RAKKA Rev1**: WebHID (5249:4C54), 키보드/마우스 Keydown·Keyup 측정, 예열, 그래프, CSV.
-- **RAKKA Rev3**: WebUSB (5249:4C65), 공식 사이트 코드에서 확인한 64바이트 `contact_once` 명령, 키보드/마우스 Keydown·Keyup, 예열·그래프·CSV. **실제 Rev3 하드웨어 실측 검증 필요.**
+- **RAKKA Rev3**: WebUSB (5249:4C65), 공식 사이트 코드에서 확인한 64바이트 `contact_once` 명령, 키보드/마우스 Keydown·Keyup, 예열·그래프·CSV. 수신 먼저 방식과 기준 장비 맞춤 보정 추정값. 실제 접점 시각에 대한 절대 정확도는 미검증.
 - **PTG Studio**: `https://pl.ptgstudio.com/`의 2026-10-15 사용자 HAR 캡처 응답 12개(HTML, JS, CSS, PNG)를 `ptg/` 아래에 보관.
-- **Rev3**는 메인 RAKKA 화면에 다시 추가했습니다. 이전처럼 명령 없는 수신 대기 대신 공식 코드에서 확인한 OUT→IN 요청/응답 방식입니다.
+- **Rev3**는 메인 RAKKA 화면에 다시 추가했습니다. 버전 명령(0)으로 연결을 확인하고 접점 명령(2)으로 측정합니다. 기본 접점 측정은 IN 수신을 먼저 등록한 뒤 OUT을 보냅니다.
 
 ## PTG 스냅샷의 한계
 
@@ -36,9 +36,13 @@ Rev1 Feature report ID=0, 8바이트, 첫째 바이트 유지시간(1~200ms), �
 ```sh
 node --check app.js
 node --check protocol.mjs
+node --check measurement.mjs
+node --check calibration.mjs
 node --check rev3-protocol.mjs
+node --check rev3-diagnostics.mjs
+node --check usb-descriptors.mjs
 node --check server.mjs
-node --test tests/protocol.test.mjs tests/rev3-protocol.test.mjs
+node --test tests/*.test.mjs
 ```
 
 ## 권리
@@ -82,61 +86,63 @@ PTG 화면 위의 별도 전체 너비 전환 바를 제거하고, 기존 흰색
 - 응답 byte 0: 명령 ID, byte 1: 결과 코드(0 성공), offset 2: uint32 데이터
 - Rev3 지연 계산 기준점은 **transferIn 응답을 받은 직후**로, Rev1의 Feature Report 전송 완료 직후와 다릅니다.
 
-초기 연결 시 `get_version`을 요청하며, 측정 중에는 `contact_once`만 전송합니다. USB 장치가 응답하지 않으면 2.5초 후 수신 대기를 중단하고 재연결하도록 처리합니다. **Rev3 실기 통과 여부와 공식 사이트 수치 일치 여부는 아직 확인되지 않았습니다.**
+초기 연결 시 `get_version`을 요청하며, 측정 중에는 `contact_once`만 전송합니다. USB 장치가 응답하지 않으면 2.5초 후 수신 대기를 중단하고 재연결하도록 처리합니다. 사용자 장치의 수신 순서 비교는 조사 기록에 보관했습니다. 실제 접점 시각 기준의 절대 정확도는 검증되지 않았습니다.
 
 상세 규격은 [docs/rev3-protocol.md](docs/rev3-protocol.md)에 기재했습니다. 원본 HAR과 JS는 사용자 로컬에서만 보존하며 이 공개 저장소에는 넣지 않았습니다.
 
 
-## Rev3 지연시간이 다른 테스터보다 짧아 보이는 이유 (진단)
+## 현재 Rev3 기본 측정과 기준 장비 맞춤 보정
 
-Rev3 원본 웹사이트는 WebUSB **IN 응답이 끝난 시각**을 기준으로 Keydown/Keyup 지연을 계산합니다. Rev1은 HID 전송 완료 시각을 기준으로 합니다. PTG Studio는 별도 기기와 HID 프로토콜로 이벤트와 USB 명령 왕복 시간의 중간 지점을 이용합니다. 서로 측정 기준이 같지 않아 다른 수치가 나올 수 있습니다.
+화면은 연결·설정·Keydown/Keyup 평균·최소/P95/최대·그래프·CSV를 표시합니다. 여러 중간점 비교 패널은 유지하지 않고 **Rev3 보정 · 다른 테스터에 맞춤** 설정을 접힌 영역으로 제공합니다.
 
-본 프로젝트는 원본 Rev3 지연 수치를 그대로 표시하면서 다음 추가 항목을 기록합니다.
+Rev3는 IN 수신을 먼저 등록하고 기존 64바이트 `contact_once` 요청을 보냅니다. 현재 기본 결과는 다음 **경험적 보정 추정값**입니다.
 
-- OUT 완료 기준 Keydown/Keyup: 같은 키 이벤트 시각에서 WebUSB `transferOut` 완료 시각을 뺀 **참고 수치**.
-- USB 응답 대기: `transferIn` 완료 시각에서 `transferOut` 완료 시각을 뺀 시간.
-- CSV 추가 컬럼: `rev3_out_keydown_ms`, `rev3_out_keyup_ms`, `rev3_usb_reply_wait_ms`.
+```text
+Keydown = 입력 처리 시각 − IN 완료 시각 + 누름 보정값
+Keyup   = 입력 처리 시각 − IN 완료 시각 − 요청 유지시간 + 뗌 보정값
+```
 
-수식상 **OUT 기준 지연 = 공식 Rev3 IN 기준 지연 + USB 응답 대기 시간**입니다. 응답 대기 전체가 입력 장치의 실제 레이턴시는 아니며, OUT 기준도 보정된 정답이나 절대 측정값이 아닙니다. 원본과 로컬 측정값 비교는 **동일한 Rev3 기기, 동일한 키/마우스, 동일한 유지 시간·PC 조건**에서 해야 합니다.
+기본 보정값은 **누름 +7.334ms / 뗌 +8.014ms**입니다. 사용자가 2026-10-17 올린 FUN60 Ultra Rev1·유지 20ms·50회 평균 **0.58ms / 0.46ms**와, 2026-10-30 Rev3 원본 IN 평균 −6.754ms / −7.554ms의 차이로 정했습니다. 이번 Rev3 CSV에 적용하면 평균 0.58ms / 0.46ms가 됩니다. 당시 GMK70 Rev3 원본 2.55ms에도 누름 보정을 적용하면 9.884ms로, 사용자가 보고한 Rev1·PTG 약 10ms와 대략 맞습니다. GMK의 대략값은 기본 보정 계산에 섞지 않았습니다. 서로 다른 실행을 경험적으로 맞춘 값이며 테스터 자체 지연을 실측한 값은 아닙니다. 음수는 절댓값이나 0으로 접지 않고 표·그래프·CSV에 그대로 남깁니다. Rev1 계산식은 기존 OUT 완료 기준입니다.
 
+### 다른 테스터 값으로 맞추기
 
-## Rev3 중간점 추정치 표시 (2026-10-17)
+1. 같은 키보드·키·연결 방식·유지시간·PC 조건에서 다른 Rev 또는 기준 테스터의 Keydown/Keyup 평균을 구합니다.
+2. Rev3로 같은 키보드를 측정한 뒤 **Rev3 보정 · 다른 테스터에 맞춤**을 펼칩니다.
+3. 기준 장비의 평균과 이름을 입력하고 **이번 측정 평균을 기준값에 맞추기**를 누릅니다.
+4. `각 보정값 = 기준 장비 평균 − 이번 Rev3 원본 IN 기준 평균`으로 누름·뗌을 각각 계산합니다. 현재 결과도 원본에서 다시 계산하며 중복 보정하지 않습니다.
+5. 같은 키보드를 새로 측정해 일치가 반복되는지 확인한 뒤 다른 키보드에 적용합니다. 보정에 쓴 데이터의 평균이 목표와 맞는 것은 계산 결과이며 독립 검증은 아닙니다.
 
-같은 Rev3 측정에서 FUN60 Ultra는 원본 IN 기준 Keydown 약 -6.89ms, USB 응답 대기 약 15.98ms로 관측됐고, GMK70은 원본 약 2.55ms / USB 응답 대기 약 16.09ms였습니다. 원본 값에 **USB 응답 대기의 절반**을 더하면 각각 약 **1.10ms / 10.60ms**가 되어 사용자가 다른 테스터에서 관측한 대략적 결과와 유사합니다.
+보정값을 직접 입력해 **보정값 적용**으로 바꾸거나 **이전 Rev1 기준으로 복원**할 수 있습니다. 적용값과 기준 장비 정보는 이 브라우저의 localStorage에 저장합니다. 측정 중에는 변경을 막고 각 회차에 당시 설정을 복사합니다. 원본 입력/USB 시각은 바뀌지 않습니다.
 
-이것은 **실제 스위치 접점이 명령과 USB 응답의 정확한 중간 시점에 닫힌다는 증거가 아닙니다.** 과거 `latency.rakka.cn` 사이트가 실제로 다른 계산식을 사용했는지도 미확인입니다.
+Rev3에서 USB 오류·입력 시간 초과·입력 순서 오류가 나면 해당 행을 기록하고 세션을 닫아 추가 접점 명령을 멈춥니다. 성공한 큰 값은 잘라내거나 실패 처리하지 않습니다. 실패 시에도 받은 입력과 USB 시각은 CSV에 남으며 평균에는 포함하지 않습니다.
 
-Rev3 결과 화면에서 큰 평균·최소·최대·P95와 회차별 결과는 **중간점 추정값**을 기본으로 보여줍니다. 그 아래 `Rev3 기준점 비교` 영역에는 **원본 IN 기준 Keydown·Keyup 평균을 작은 글씨로 표시**하고, USB 응답 대기 평균·범위 및 OUT 완료 기준값을 함께 표시합니다. Rev1과 PTG Studio에는 적용하지 않습니다. 원본 데이터는 항상 보존합니다.
+### 기본 CSV
 
-**매 측정 회차마다** `contact_once`의 `transferOut` 직후와 `transferIn` 완료 시각을 기록해서 각 회차의 OUT→IN 대기시간 절반을 그 회차에만 더합니다. 그 후 성공 회차의 추정값들로 평균·최소·최대·P95를 계산합니다. 고정 +8ms 보정이나 전체 평균값으로 각 회차를 보정하는 방식은 사용하지 않습니다.
+`keydown_ms`, `keyup_ms`는 화면의 보정 추정값이며 현재 Rev3의 `timing_basis`는 **`in_offset`**입니다. Rev1은 `out_complete`를 유지합니다. 이전 29컬럼 요청 기준 CSV의 `out_request`와 의미가 다릅니다.
 
-- 기존 CSV `keydown_ms`, `keyup_ms`: **원본 IN 기준** (하위 호환 유지)
-- 추가 CSV `rev3_midpoint_keydown_est_ms`, `rev3_midpoint_keyup_est_ms`: 회차마다 실제 측정한 USB 응답 대기 시간의 1/2을 더한 추정값
-- `rev3_out_keydown_ms`, `rev3_out_keyup_ms`, `rev3_usb_reply_wait_ms`도 그대로 유지
+기존 29컬럼 위치는 유지하고 다음 11컬럼을 추가했습니다.
 
-중간점 추정은 실제 지연시간의 확정 보정이 아니며, 특히 Keyup은 보정 후에도 음수가 남을 수 있습니다.
+- 요청 기준 원본: `out_request_keydown_ms`, `out_request_keyup_ms`
+- 적용 보정값: `keydown_offset_ms`, `keyup_offset_ms`
+- 보정 출처/기준: `calibration_source`, `calibration_reference`
+- 기준 장비 평균: `calibration_reference_keydown_ms`, `calibration_reference_keyup_ms`
+- 보정에 사용한 Rev3 원본 평균: `calibration_baseline_in_keydown_ms`, `calibration_baseline_in_keyup_ms`
+- 사용 회차 수: `calibration_sample_count`
 
-## Rev3 전송 전 시각을 포함한 비교 실험
+IN 기준 원본 `in_keydown_ms`, `in_keyup_ms`와 USB/입력 시각도 유지합니다. `calibration_source`는 `manual`(직접 입력) 또는 `reference_fit`(기준 장비 맞춤)입니다. 기본 프로필도 `reference_fit`이고 기준 이름·평균·Rev3 원본 평균·50회 기록을 포함합니다. 실패/누락값은 0으로 채우지 않습니다. 예전 실험 CSV의 기준이나 원본값을 새 의미로 덮어 읽지 마세요.
 
-기존 큰 측정값과 원본 IN 기준값은 그대로 유지하고, `Rev3 기준점 비교`에 새 추정 평균과 회차별 비교표를 추가했습니다.
+자세한 공식·재계산 결과와 제한은 [기준 장비 맞춤 보정 기록](docs/rev3-reference-calibration-2026-10-30.md)에 있습니다.
 
-- `T0`: `transferOut` 호출 직전
-- `T1`: `transferOut` 완료 후 (기존 OUT 기준)
-- `T2`: `transferIn` 완료 후 (원본 IN 기준)
-- 기존 추정: `keydownAt - (T1 + T2) / 2`
-- 새 추정: `keydownAt - (T0 + T2) / 2`
-- Keyup은 두 식 모두 `keyupAt`을 사용하고 설정한 유지시간을 차감합니다.
+## 지금까지 한 실험과 원본 기록
 
-새 추정은 기존 추정보다 **해당 회차 OUT 전송 소요시간 `(T1 - T0)`의 절반**만큼 큽니다. OUT 전송 구간까지 포함했을 때 음수 발생과 값의 분포가 어떻게 달라지는지 비교하는 실험입니다. 고정 보정값이나 절댓값을 적용하지 않으며 음수를 그대로 보존합니다. 실제 접점 시각의 정확성이나 음수 해소는 보장하지 않습니다. IN 완료 시각의 흔들림도 여전히 영향을 줍니다.
+[Rev3 조사 기록 — 2026-10-29](docs/rev3-investigation-2026-10-29.md)에 음수 문제, 연결 방식·유지시간·이벤트 시각, 버전 통신, USB 엔드포인트 설정, 버전/접점 수신 순서 비교와 남은 과제를 정리했습니다.
 
-OUT이 stall로 재전송된 회차는 복구 대기가 섞이므로 새 추정 평균 및 음수 횟수 비교에서 제외하며, 비교표와 CSV에 표시합니다. 기존 추정값은 계속 보존합니다. 새 추정 평균과 음수 횟수 비교는 새 추정이 유효한 동일 회차만 사용합니다.
+원본 CSV 12개와 설명자 JSON 1개는 [실험 파일 폴더](docs/experiments/rev3-2026-10-29/)에 보존했으며 파일 이름 대응과 SHA-256은 [manifest.json](docs/experiments/rev3-2026-10-29/manifest.json)에 있습니다. 실패 행과 튀는 값도 그대로 남겼습니다. 실험용 모듈은 재현용으로 보관하며 기본 화면에는 연결하지 않습니다.
 
-기존 CSV 9개 컬럼의 순서와 의미는 유지하며 다음 컬럼을 뒤에 추가했습니다.
+[FUN60 추가 측정 — 2026-10-30](docs/rev3-fun60-2026-10-30.md)에는 새 기본 측정의 50회 성공 결과와 OUT 완료 관측 시간의 영향을 정리했습니다. 요청 기준 평균은 Keydown 5.124ms / Keyup 4.324ms이며 테스터 지연이 포함된 값입니다. [원본 CSV와 해시](docs/experiments/rev3-2026-10-30/)도 별도로 보관했습니다.
 
-- `rev3_usb_out_duration_ms`, `rev3_usb_transaction_ms`: `T1-T0`, `T2-T0` (재전송 시 복구 구간도 포함)
-- `rev3_transaction_midpoint_keydown_est_ms`, `rev3_transaction_midpoint_keyup_est_ms`: 새 추정값, 재전송 시 빈 칸
-- `rev3_out_retried`: OUT 재전송 여부
-- `rev3_out_start_at_ms`, `rev3_out_end_at_ms`, `rev3_in_end_at_ms`: `T0`, `T1`, `T2`
-- `rev3_keydown_at_ms`, `rev3_keyup_at_ms`, `rev3_hold_ms`: 입력 시각 및 유지시간
+## Windows USB 완료 통지 추적 (실험)
 
-시각은 페이지의 `performance.now()` 기준 밀리초이며 날짜·벽시계 시간이 아닙니다. 기존 CSV에는 `T0`가 없으므로 이전 파일로 새 추정값을 복원할 수 없습니다. Rev1의 추가 컬럼은 빈 칸입니다. PTG는 별도 HID 장치에서 누름·뗌 명령을 각각 보내므로, 이번 실험은 PTG의 측정 구조 전체를 이식한 것이 아닙니다.
+Windows USB 스택의 전송 이벤트와 웹 CSV를 대조하기 위한 60초 캡처 도구를 추가했습니다. `capture-usb-trace-windows.bat`를 관리자 권한으로 실행한 뒤 Rev3 측정 10회를 수행하고, 생성된 ZIP과 같은 실행의 CSV를 보관합니다. 전송 헤더를 수집하며 패킷 내용 키워드는 사용하지 않습니다. 구형 USB2 전용 컨트롤러는 이번 도구의 지원 범위에 포함하지 않습니다.
+
+CSV의 기존 40컬럼 뒤에 `run_id`, `time_origin_epoch_ms`, `clock_anchor_perf_ms`, `clock_anchor_epoch_ms`를 추가했습니다. 시간 매핑은 대조를 위한 참고값이며 실제 접점 시각이나 테스터 지연을 확정하지 않습니다. 기존 보정식과 결과는 유지합니다. 자세한 실행·복구·해석 절차는 [Windows USB 추적 안내](docs/rev3-windows-usb-trace.md)를 참고하세요.
