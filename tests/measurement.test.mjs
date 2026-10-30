@@ -115,3 +115,23 @@ test("basic CSV matches displayed values, distinguishes basis and contains no mi
   const failed = measurementCsv([{ index: 2, error: 'bad,"reply"' }]);
   assert.match(failed, /"bad,""reply"""/);
 });
+
+test("ETW clock metadata stays associated with its run, including failed rows and old captures", () => {
+  const clock = { runId: 'run-one', timeOriginEpoch: 1793300000000.125, clockAnchorPerf: 345.25, clockAnchorEpoch: 1793300000345 };
+  const rows = csvRows([
+    { index: 1, ...clock, ...rev3RequestMeasurement(reply(), times(), 20) },
+    { index: 2, ...clock, error: 'timeout', failureStage: 'input_timeout' },
+    { index: 1, runId: 'run-two', timeOriginEpoch: 1793300001000, down: 1, up: 2 },
+    { index: 1, down: 3, up: 4 }
+  ]);
+  for (const row of rows.slice(0, 2)) {
+    assert.equal(row.run_id, 'run-one');
+    assert.equal(row.time_origin_epoch_ms, '1793300000000.125');
+    assert.equal(row.clock_anchor_perf_ms, '345.250');
+    assert.equal(row.clock_anchor_epoch_ms, '1793300000345.000');
+  }
+  assert.equal(rows[1].keydown_ms, '');
+  assert.equal(rows[2].run_id, 'run-two');
+  assert.equal(rows[3].time_origin_epoch_ms, '');
+  assert.equal(rows[3].run_id, '');
+});

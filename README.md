@@ -140,3 +140,9 @@ IN 기준 원본 `in_keydown_ms`, `in_keyup_ms`와 USB/입력 시각도 유지�
 원본 CSV 12개와 설명자 JSON 1개는 [실험 파일 폴더](docs/experiments/rev3-2026-10-29/)에 보존했으며 파일 이름 대응과 SHA-256은 [manifest.json](docs/experiments/rev3-2026-10-29/manifest.json)에 있습니다. 실패 행과 튀는 값도 그대로 남겼습니다. 실험용 모듈은 재현용으로 보관하며 기본 화면에는 연결하지 않습니다.
 
 [FUN60 추가 측정 — 2026-10-30](docs/rev3-fun60-2026-10-30.md)에는 새 기본 측정의 50회 성공 결과와 OUT 완료 관측 시간의 영향을 정리했습니다. 요청 기준 평균은 Keydown 5.124ms / Keyup 4.324ms이며 테스터 지연이 포함된 값입니다. [원본 CSV와 해시](docs/experiments/rev3-2026-10-30/)도 별도로 보관했습니다.
+
+## Windows USB 완료 통지 추적 (실험)
+
+Windows USB 스택의 전송 이벤트와 웹 CSV를 대조하기 위한 60초 캡처 도구를 추가했습니다. `capture-usb-trace-windows.bat`를 관리자 권한으로 실행한 뒤 Rev3 측정 10회를 수행하고, 생성된 ZIP과 같은 실행의 CSV를 보관합니다. 전송 헤더를 수집하며 패킷 내용 키워드는 사용하지 않습니다. 구형 USB2 전용 컨트롤러는 이번 도구의 지원 범위에 포함하지 않습니다.
+
+CSV의 기존 40컬럼 뒤에 `run_id`, `time_origin_epoch_ms`, `clock_anchor_perf_ms`, `clock_anchor_epoch_ms`를 추가했습니다. 시간 매핑은 대조를 위한 참고값이며 실제 접점 시각이나 테스터 지연을 확정하지 않습니다. 기존 보정식과 결과는 유지합니다. 자세한 실행·복구·해석 절차는 [Windows USB 추적 안내](docs/rev3-windows-usb-trace.md)를 참고하세요.

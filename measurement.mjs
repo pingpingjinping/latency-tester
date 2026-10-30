@@ -108,7 +108,7 @@ export function measurementCsv(records) {
     const text = String(value);
     return /[",\r\n]/.test(text) ? '"' + text.replaceAll('"', '""') + '"' : text;
   };
-  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,revision,timing_basis,transfer_order,hold_ms,out_start_at_ms,out_end_at_ms,in_end_at_ms,in_submitted_at_ms,keydown_at_ms,keyup_at_ms,keydown_event_at_ms,keyup_event_at_ms,keydown_handler_delay_ms,keyup_handler_delay_ms,in_keydown_ms,in_keyup_ms,out_duration_ms,reply_wait_ms,total_ms,command_id,reply_value,out_retried,failure_stage,phase,error,out_request_keydown_ms,out_request_keyup_ms,keydown_offset_ms,keyup_offset_ms,calibration_source,calibration_reference,calibration_reference_keydown_ms,calibration_reference_keyup_ms,calibration_baseline_in_keydown_ms,calibration_baseline_in_keyup_ms,calibration_sample_count"];
+  const lines = ["\uFEFFtest,keydown_ms,keyup_ms,status,revision,timing_basis,transfer_order,hold_ms,out_start_at_ms,out_end_at_ms,in_end_at_ms,in_submitted_at_ms,keydown_at_ms,keyup_at_ms,keydown_event_at_ms,keyup_event_at_ms,keydown_handler_delay_ms,keyup_handler_delay_ms,in_keydown_ms,in_keyup_ms,out_duration_ms,reply_wait_ms,total_ms,command_id,reply_value,out_retried,failure_stage,phase,error,out_request_keydown_ms,out_request_keyup_ms,keydown_offset_ms,keyup_offset_ms,calibration_source,calibration_reference,calibration_reference_keydown_ms,calibration_reference_keyup_ms,calibration_baseline_in_keydown_ms,calibration_baseline_in_keyup_ms,calibration_sample_count,run_id,time_origin_epoch_ms,clock_anchor_perf_ms,clock_anchor_epoch_ms"];
   for (const r of records) {
     lines.push([r.index, r.error ? NaN : r.down, r.error ? NaN : r.up, r.error ? "failed" : "ok",
       r.revision, r.timingBasis, r.transferOrder, r.holdTime,
@@ -121,7 +121,8 @@ export function measurementCsv(records) {
       r.replyCommand, r.replyValue, r.outRetried, r.failureStage, r.phase, r.error,
       r.downFromRequest, r.upFromRequest, r.calibration?.downOffset, r.calibration?.upOffset,
       r.calibration?.source, r.calibration?.referenceName, r.calibration?.referenceDown, r.calibration?.referenceUp,
-      r.calibration?.baselineDown, r.calibration?.baselineUp, r.calibration?.sampleCount].map(cell).join(","));
+      r.calibration?.baselineDown, r.calibration?.baselineUp, r.calibration?.sampleCount,
+      r.runId, r.timeOriginEpoch, r.clockAnchorPerf, r.clockAnchorEpoch].map(cell).join(","));
   }
   return lines.join("\r\n") + "\r\n";
 }

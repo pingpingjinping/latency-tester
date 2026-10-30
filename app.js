@@ -265,6 +265,11 @@ async function run(event) {
   }
   state.records = [];
   state.lastRevision = revision;
+  // Epoch mapping is only an ETW alignment hint, not a native USB timestamp.
+  const runTiming = {
+    runId: crypto.randomUUID(), timeOriginEpoch: performance.timeOrigin,
+    clockAnchorPerf: performance.now(), clockAnchorEpoch: Date.now()
+  };
   render();
   let count = 0, failure = null;
   try {
@@ -278,14 +283,14 @@ async function run(event) {
         const result = await measureOnce(device, revision, settings, controller.signal);
         if (!warmup) {
           count++;
-          state.records.push({ index: count, phase: "measure", ...result, error: null });
+          state.records.push({ index: count, phase: "measure", ...result, ...runTiming, error: null });
         }
       } catch (e) {
         if (controller.signal.aborted) break;
         if (!warmup) count++;
         if (!warmup || revision === "rev3") {
           state.records.push({ index: warmup ? 0 : count, revision, holdTime: settings.hold,
-            ...e.measurement, phase: warmup ? "warmup" : "measure", down: NaN, up: NaN,
+            ...e.measurement, ...runTiming, phase: warmup ? "warmup" : "measure", down: NaN, up: NaN,
             error: e.message || "오류" });
         }
         if (revision === "rev3") {

@@ -24,3 +24,10 @@ jobs:
       - run: node --check ptg/assets/index-BZEgvNeM.js
       - run: node --check ptg/assets/index-B3lzit8o.js
       - run: node --test tests/*.test.mjs
+  windows-trace-checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse capture script and check isolated session recovery
+        shell: powershell
+        run: ./tests/usb-etw.test.ps1
