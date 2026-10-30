@@ -22,6 +22,20 @@ function Expect-Failure([scriptblock]$Body) {
     try { & $Body } catch { $failed = $true }
     Assert $failed 'Expected failure was not raised.'
 }
+$script:decodeCode = 0; $script:decodeCalls = @()
+function tracerpt.exe {
+    $script:decodeCalls += ,$args
+    if ($args -contains '-rts' -and $args -contains '-summary') {
+        throw 'tracerpt rejects the combination of -rts and -summary.'
+    }
+    if ($script:decodeCode -eq 0) {
+        $xmlIndex = [Array]::IndexOf($args, '-o')
+        $summaryIndex = [Array]::IndexOf($args, '-summary')
+        '<Events />' | Set-Content -LiteralPath $args[$xmlIndex + 1] -Encoding utf8
+        'Synthetic summary' | Set-Content -LiteralPath $args[$summaryIndex + 1] -Encoding utf8
+    }
+    $global:LASTEXITCODE = $script:decodeCode
+}
 try {
     $state = @{ session = 'unrelated-trace'; directory = $root; status = 'running' }
     Save-State $state
@@ -46,5 +60,23 @@ try {
     Assert ($script:calls.Count -eq 1 -and $script:calls[0][0] -eq 'delete') 'Retry tried to stop an already stopped session.'
     Assert (-not (Test-Path -LiteralPath $path)) 'Successful cleanup retained active state.'
     Assert ($script:calls[0][2] -eq $state.session) 'Cleanup used the wrong session name.'
-    Write-Host 'PowerShell parse and isolated session recovery checks passed.'
+    foreach ($code in @(0, 87)) {
+        $script:decodeCode = $code
+        $exportDir = Join-Path $root "export-$code"
+        New-Item -ItemType Directory -Path $exportDir | Out-Null
+        $raw = Join-Path $exportDir 'usb_000001.etl'
+        [IO.File]::WriteAllBytes($raw, [byte[]]@(1, 2, 3, 4))
+        Export-Trace @{ directory = $exportDir }
+        Assert (Test-Path -LiteralPath "$exportDir.zip") 'Export did not create an archive.'
+        $result = Get-Content (Join-Path $exportDir 'export.json') -Raw | ConvertFrom-Json
+        Assert ($result.xmlDecoded -eq ($code -eq 0)) 'Decode failure was reported as success.'
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [IO.Compression.ZipFile]::OpenRead("$exportDir.zip")
+        try {
+            $entry = $zip.GetEntry('usb_000001.etl')
+            Assert ($null -ne $entry -and $entry.Length -eq 4) 'Original ETL was lost from the archive.'
+        } finally { $zip.Dispose() }
+    }
+    Assert ($script:decodeCalls.Count -eq 2) 'Expected both export outcomes to be checked.'
+    Write-Host 'PowerShell parse, isolated session recovery and mocked export checks passed.'
 } finally { Remove-Item -LiteralPath $root -Recurse -Force }

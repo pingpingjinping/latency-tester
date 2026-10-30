@@ -37,7 +37,8 @@ function Export-Trace($State) {
     $xml = Join-Path $directory 'usb-events.xml'
     $summary = Join-Path $directory 'trace-summary.txt'
     $arguments = @($etl | ForEach-Object { $_.FullName })
-    $arguments += @('-o', $xml, '-of', 'XML', '-rts', '-lr', '-summary', $summary, '-y')
+    # -rts cannot be combined with -summary. Keep UTC XML and loss summary.
+    $arguments += @('-o', $xml, '-of', 'XML', '-lr', '-summary', $summary, '-y')
     & tracerpt.exe @arguments 2>&1 | Out-File (Join-Path $directory 'decode.txt') -Encoding utf8
     $decoded = $LASTEXITCODE -eq 0
     @{ stoppedUtc = [DateTime]::UtcNow.ToString('o'); xmlDecoded = $decoded } |
